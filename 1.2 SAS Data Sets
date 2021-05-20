@@ -1,0 +1,551 @@
+*************   P   R   O   G   R   A   M       H   E   A   D   E   R   *****************
+*****************************************************************************************
+*                                                                                       *
+*   PROGRAM:    1.2 - SAS Data Sets.sas                                                 *
+*   PURPOSE:    Illustrate material in Chapter 1.2                                      *
+*   AUTHOR:     Jud Blatchford                                                          *
+*   CREATED:    2017-08-23                                                              *
+*                                                                                       *
+*   COURSE:     BIOS 6680 - Data Management Using SAS                                   *
+*   DATA USED:  SASHelp.[Cars, Classfit, _ALL_]. In-Stream, SASUser._ALL_, Source.Scans *
+*   SOFTWARE:   SAS (r) Proprietary Software 9.4 (TS1M4)                                *
+*   MODIFIED:   DATE        BY  REASON                                                  *
+*               ----------  --- ------------------------------------------------------- *
+*               2018-09-02  PJB Added TOC & Comprehension Checks                        *
+*                                                                                       *
+*   CONTENTS:                                                                           *
+*   	Section 1.2.0 - Background to SAS Data Sets                                     *
+*   	Section 1.2.1 - SAS Data Values                                                 *
+*   	Section 1.2.2 - SAS Data Set Metadata                                           *
+*   	Section 1.2.3 - SAS Libraries                                                   *
+*   	Section 1.2.4 - Additional Material                                             *
+*   	Section 1.2.5 - Solutions                                                       *
+*                                                                                       *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+
+
+*   SECTION 1.2.0 - BACKGROUND TO SAS DATA SETS   *; RUN;
+
+*	SAS data sets are structured data files that can only be read in SAS
+	They are rectangular tables which contain:
+		Variables (a.k.a. columns or fields in database terminology)
+		Observations (a.k.a. rows or records in database terminology)
+		(Side note:  data sets are a.k.a. tables in database terminology)
+
+	Every SAS data set has contains 2 parts to it, the:
+		1)	Data portion, which contains the data values
+		2)	Descriptor portion, which contains the metadata, the data abuot the data
+
+
+		
+
+*   SECTION 1.2.1 - SAS DATA VALUES   *; RUN;
+
+*	Data portion:  Every variable is 1 of only 2 types:
+		1)	Character
+		2)	Numeric   *;
+
+
+*   Illustration 1 - Using PROC PRINT to View the Data Portion   *; RUN;
+
+*	Goal:  View the data values for the 'SASHelp.Cars' data set   *;
+PROC PRINT	DATA = SASHelp.Cars;
+	RUN;
+
+*	Notice the justification:
+		Character variable values are left-justified
+		Numeric variable values are right-justified
+
+	Data values may also be seen by browsing the data set   *;
+
+
+*   Illustration 2 - Controlling the Number of Observations to Display   *; RUN;
+
+*	Data set options follow the name of a data set and are specified within parentheses
+	The OBS= option specified how many observations to display   *;
+PROC PRINT	DATA = SASHelp.Cars	(OBS = 10);
+	RUN;
+
+
+*   Illustration 3 - Controlling the Variables to Display   *; RUN;
+
+*	The VAR statement is used to specify:
+	1)	The variables to display, and
+	2)	The order of the variables   *;
+PROC PRINT	DATA = SASHelp.Cars	(OBS = 10);
+	VAR	Make Model MPG_Highway MSRP;
+	RUN;
+
+
+*   Illustration 4 - Character Values May Contain Any Character (Including Numeric Digits)   *; RUN;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Character $ 1-8;
+	DATALINES;
+123
+45.98
+-567.3
++800.8
+(60.3)
+4,567
+1E1
+5x10^2
+-9.8E2
+4E-3
+-12.3E-4
+$30.99
+8+5
+10-3
+ 
+BIOS6680
+;
+*NO (), NO ,, NO ADDITION/SUBTRACTION, 
+*	Note:  A blank space represents a missing value for a character variable   *;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+*   Illustration 5 - The Default Length for Character Variables   *; RUN;
+
+*	The default length for character variables is 8 bytes
+	Character variables use 1 byte of storage per character (including blanks)   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DLM=',';
+	INPUT	Character	$;
+	DATALINES;
+7
+12 45 78
+12345678
+123456789012
+1234567890123
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+*	Note:  We will learn how to instruct SAS to keep more than 8 characters (coming soon!)   *;
+
+
+*	Illustration 6 - Valid Characters for Numeric Variables   *; RUN;
+
+*	Numeric variables may only contain the following characters:
+	-	Numeric digits
+	-	A leading + or - sign
+	-	A decimal
+	-	The letter 'E' (for scientific notation)   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Number	1-8;
+	IF	_ERROR_ = 1	THEN PUTLOG;
+	DATALINES;
+123
+45.98
+-567.3
++800.8
+(60.3)
+4,567
+1E1
+5x10^2
+-9.8E2
+4E-3
+-12.3E-4
+$30.99
+8+5
+10-3
+ 
+BIOS6680
+;
+*	Note:  A period represents a missing value for a numeric variable   *;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+*   Illustration 7 - The Default Length for Numeric Variables Is 8 Bytes   *; RUN;
+
+*	The default length for numeric variables is also 8 bytes
+	NB:  Numbers longer than 8 digits may be stored (up to 17 significant digits)!
+		 This is because they are stored using floating point or binary representaton
+			(i.e. they are NOT simply a copy of the digits, as character values are)   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Number;
+	DATALINES;
+7
+12345678
+123456789012
+1234567890123
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+*	A format is applied below to specify to SAS how to display the values   *;
+PROC PRINT	DATA = WORK.Illus;
+	FORMAT	Number COMMA17.;
+	RUN;
+
+
+*   Illustration 8 - SAS Date Values   *; RUN;
+
+*	SAS dates are numeric values
+	Dates are stored as the number of days from January 1, 1960
+	-	All date values are integers
+	-	January 1, 1960 is stored as 0
+	-	Dates after January 1, 1960 are positive integers.  For example,
+			January 2, 1960 is stored as 1
+			January 10, 1960 is stored as 9
+			January 1, 1961 is stored as 366
+			etc
+	-	Dates before January 1, 1960 are negative integers.  For example,
+			December 31, 1959 is stored as -1
+			December 29, 1959 is stored as -3
+			January 1, 1959 is stored as -365
+			etc   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Date;
+	FormattedDate	= Date;
+	FORMAT	FormattedDate WORDDATE.;
+	DATALINES;
+0
+1
+2
+14
+366
+-1
+-2
+-10
+-365
+1000
+10000
+20000
+21431
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+*   Illustration 9 - SAS Time Values   *; RUN;
+
+*	SAS times are numeric values
+	Times are stored as the number of seconds from midnight
+	-	All time values are integers
+	-	Midnight is stored as 0
+	-	Positive integers are the number of seconds after midnight
+	-	Negative integers are the number of seconds before midnight
+
+	Note:  There are 86,400 seconds in a day
+			Therefore, time values repeat after cycling through 86,400!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Time;
+	FormattedTime	= Time;
+	FORMAT	FormattedTime TIMEAMPM.;
+	DATALINES;
+0
+1
+7
+60
+90
+3600
+-1
+-4
+-60
+-3600
+86399
+86407
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+*   Illustration 10 - SAS Datetime Values   *; RUN;
+
+*	SAS datetimes are numeric values
+	Datetimes are stored as the number of seconds from midnight on January 1, 1960
+	-	All time values are integers
+	-	12:00:00 AM on January 1, 1960 is stored as 0 (the reference point in time)
+	-	Positive integers are the number of seconds after the reference point
+	-	Negative integers are the number of seconds before the reference point   ;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	DateTime;
+	FormattedDateTime	= DateTime;
+	FORMAT	DateTime	COMMA14.
+			FormattedDateTime DATEAMPM.;
+	DATALINES;
+0
+1
+7
+60
+86400
+86407
+-1
+-86400
+1000000
+10000000
+100000000
+1000000000
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.1   |
+* ----------------------------- *
+	Question:  What time of day is represented by the time value of 200?   *;
+*12:03:20AM;
+
+
+
+*   SECTION 1.2.2 - SAS DATA SET METADATA    *; RUN;
+
+*	Every SAS data set has metadata on both:
+	1)	The data set as a whole, and
+	2)	The individual variables
+
+	Every SAS variable has at a minimum the following 3 properties (attributes):
+	1)	Name
+	2)	Type
+	3)	Length (measured in terms of bytes of storage,
+				which is not equivalent to digits for numeric variables!)
+
+	SAS uses the following convention for names.  Names must:
+	1)	Start with a letter or underscore
+	2)	Subsequent characters may be letters, numeric digits, or underscores
+			(i.e. spaces and special characters are not allowed)
+	3)	The allowable number of characters is:
+		a)	Data sets:  32
+		b)	Variables:	32
+		c)	Libraries:	8  (specifically, for the library reference name)
+		d)	Formats:	32 (Same for informats)   *;
+
+
+*   Illustration 1 - How to Browse the Descriptor Portion Manually   *; RUN;
+
+*	No code for this illustration
+
+	SAS Studio:
+		Double-click on the icon for the data set
+			- Click on a variable to see its properties
+	Windowing Environment:
+		Right-click on the data set in the Explorer window, then select 'Properties'
+			- Select the desired tab (often 'Columns')
+		Alternatively, right-click on the data set and select 'View Columns'   *;
+
+
+*   Illustration 2 - How to Browse the Descriptor Portion Programmatically   *; RUN;
+
+*	The CONTENTS procedure (i.e. PROC CONTENTS) may be used to browse the descriptor portion
+		of a data set programmatically   *;
+PROC CONTENTS DATA = SASHelp.Classfit;
+	RUN;
+
+
+*	Illustration 3 - Ignoring Case In Variable Names   *; RUN;
+
+PROC CONTENTS
+		DATA	= SASHelp.AIR
+		ORDER	= IGNORECASE;
+	RUN;
+
+
+*	Illustration 4 - Controlling the Order of the Variables Listed   *; RUN;
+
+PROC CONTENTS
+		DATA	= SASHelp.Classfit
+		VARNUM;
+	RUN;
+	
+	
+PROC CONTENTS
+		DATA	= SASHelp.Classfit
+		VARNUM;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.2   |
+* ----------------------------- *
+	Question:  Which names below are valid SAS names for data sets or variables:
+	A)	Day3 					VALID
+	B)	Jan 2014 				INVALID- NO SPACE
+	C)	2017SalesData 			INVALID- NO START WITH NUMBERS
+	D)	Q4_Profits				VALID
+	E)	Native-American_Demog 	INVALID-NO HYPENS/DASHES *;
+
+
+
+
+*   SECTION 1.2.3 - SAS LIBRARIES   *; RUN;
+
+*	SAS data sets are stored in SAS libraries
+	A SAS library is a set of SAS files (e.g. data sets) stored in the same location
+	All libraries are "permanent" except for the WORK library, which is "temporary"
+	SAS libraries are refered to by a library reference name, a.k.a. a libref
+		Librefs are 'nicknames' for a particular library
+
+	At the start of every SAS session, SAS automatically creates the following libraries:
+	WORK:  This is the only temporary library
+			The contents in WORK are deleted at the end of every SAS session
+	SASHELP:  This library contains example data sets (e.g. Class, Cars, etc)
+	SASUSER:  This library is provided by SAS for users to have a permanent location to store files
+
+	All SAS data sets have the folowing 2-level name:
+		libref.data-set-name
+		Think of this as "location"."data-set-name".  Examples would be:
+		SASHelp.Class, WORK.Illus, etc.
+	Note:  Temporary data sets only require the data set name (i.e. WORK. is not required)
+	Example:  PROC PRINT DATA = Class
+		This instructs SAS to display the values in the temporary data set named 'Class'
+
+	User-Defined Libraries
+	Most often, users want to work with and process their SAS data sets
+	To do so, users need to point SAS to a library of their SAS data sets
+	This is accomplished using the LIBNAME statement
+	Note:  LIBNAME is a global statement, so it will execute immediately   *;
+
+	
+*   Illustration 1 - Using a LIBNAME Statement to Connect SAS to a User-Defined Library   *; RUN;
+
+*	Goal:  Create a user-defined library to be able to access SAS data for the Cancer RCT
+
+    1)  Change the path in the first %LET statement to the location of the BIOS 6680 course root folder
+		SAS University Edition:		Your path would be similar to /folders/myfolders/BIOS 6680 - SAS
+		SAS OnDemand for Academics:	Your path would be similar to /home/patrick.blatchfo/BIOS 6680 - SAS
+		Licensed Installation:		Your path would be similar to C:\My Courses\BIOS 6680 - SAS   *;
+%LET CourseRoot = /folders/myfolders/BIOS 6680- SAS;
+
+*	Syntax:	LIBNAME libref <ENGINE> "path-to-folder-containing-data-sets";
+LIBNAME CanSrc  "&CourseRoot/Cancer RCT/Data/1_Source";
+*	There should now be a 'CanSrc' library!
+	Inside the library you should be able to see the 'Scans' data set!   *;
+
+
+*   Illustration 2 - SAS Data Sets Don't Have to Be In the Folder to Establish a Library   *; RUN;
+
+*	Goal:  Create a user-defined library for the location where we will put future SAS data sets   *;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+*   Illustration 3 - Disassociating a Library   *; RUN;
+
+*	A library may be disassociated by using the CLEAR keyword in the LIBNAME statement
+	You will see a note in the log saying that the libref has been deassigned   *;
+LIBNAME	CanImpt	CLEAR;
+
+
+*   Illustration 4 - SAS Engines   *; RUN;
+
+*	Notice the engine used in illustration 2 (check the log)
+	By default SAS will choose an engine
+	However, an engine may be specified in the LIBNAME statement
+	Note:  The BASE and V9 engines are interchangeable   *;
+LIBNAME CanImpt V9    "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+*   Illustration 5 - Using PROC CONTENTS to Browse a Library   *; RUN;
+
+*	Use the _ALL_ keyword to specify all data sets within a library   *;
+PROC CONTENTS	DATA = SASUser._ALL_;
+	RUN;
+
+
+*   Illustration 6 - Using the PROC CONTENTS NODS Option   *; RUN;
+
+*	Goal:  View the data sets in the SASHelp library
+	Hint:  Use the NODS option (No Details) to suppress the metadata for each data set   *;
+PROC CONTENTS
+		DATA = SASHelp._ALL_
+		NODS	;
+	RUN;
+
+
+*	Illustration 7 - Using Direct Referencing to Process a Permanent Data Set   *; RUN;
+
+*   It is possible to process a data set using direct referencing
+	Direct referencing involves specifying the path to the data set
+	Although this works, it is far more cumbersome than creating a SAS library
+
+	Goal:  Use direct referencing to process the 'Scans' data set
+	1)  Change the path to the location of the 'Scans' data set on your computer   *;
+PROC PRINT
+	DATA = "&CourseRoot/Cancer RCT/Data/1_Source/Scans";
+	RUN;
+*	Note:  If the 'CourseRoot' location hadn't been previously defined, the path would be longer
+			(and different for each of us)
+
+	A better approach is to:
+	1)	Create a libref (Illustration 1), and
+	2)	Reference the data set in the library using the 2-level name   *;
+PROC PRINT DATA = CanSrc.Scans;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.3   |
+* ----------------------------- *
+	Task:  Associate the libref 'CanTabs' to the '3_Tabulations' folder in the Cancer RCT folder
+	Instructions:  Replace each instance of 'Aaaaa' etc with code to accomplish the task   *;
+LIBNAME	Aaaaa "Bbbbb";
+
+
+
+
+*   SECTION 1.2.4 - ADDITIONAL MATERIAL    *; RUN;
+
+
+*	Data files are accessed through an established library
+	WARNING:  Deleting a Data Set from a Library Will Delete It from Your Computer!   *;
+
+
+
+
+*   SECTION 1.2.5 - SOLUTIONS    *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.1   |
+* ----------------------------- *
+	Question:  What time of day is represented by the time value of 205?
+
+	Answer:  12:03:25 AM   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.2   |
+* ----------------------------- *
+	Question:  Which names below are valid SAS names for data sets or variables:
+	A)	Day3
+	B)	Jan 2014
+	C)	2017SalesData
+	D)	Q4_Profits
+	E)	Native-American_Demog
+
+	Answer:  A & D are valid names
+		B contains a space
+		C starts with a number
+		E contains a special character (a hyphen)   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.2.3   |
+* ----------------------------- *
+	Task:  Associate the libref 'CanTabs' to the '3_Tabulations' folder in the Cancer RCT folder
+	Instructions:  Replace each instance of 'Aaaaa' etc with code to accomplish the task   *;
+LIBNAME CanTabs "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+
+
+
+
+;   *'; *"; */; QUIT;   RUN;
+*   End of Program   *; RUN;
+
