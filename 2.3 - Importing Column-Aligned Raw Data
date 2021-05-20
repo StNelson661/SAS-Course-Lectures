@@ -1,0 +1,689 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	2.3 - Importing Column-Aligned Raw Data.sas                             *
+*	PURPOSE:	Illustrate material in Chapter 2.3                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-07-30																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	Address.txt, DM.csv, In-Stream                                          *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-11  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-12  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 2.3.1 - Statements Used for Importing Raw Data                          *
+*   	Section 2.3.2 - Importing Column-Aligned Data                                   *
+*   	Section 2.3.3 - Additional Material                                             *
+*   	Section 2.3.4 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the first %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 2.3.1 - STATEMENTS USED FOR IMPORTING RAW DATA   *; RUN;
+
+*	Other names for raw data are text files and flat files
+	Usually raw data have .dat and .txt file extensions
+
+	The following statements are needed to read in a raw data file
+
+	INFILE statement:  Identifies the physical location of the raw data file 
+	Options refer to properties of the data file
+
+	INPUT statement:  Describes the arrangement of values in the raw data file
+	Specifications pertain to particular variables
+
+	Strategy for importing raw data files:
+	1.	Determine how the data are structured in the raw data file:
+		1)	Column-aligned (a.k.a. fixed-width or fixed-column)
+		2)	Delimited
+		3)	Other
+
+	2.	Determine whether the variable's values are:
+		1)	Standard data
+		2)	Non-standard data (SAS needs extra instructions to interpret the values)
+
+	There are several "input styles" used to read/import raw data
+	Based on the above 2 factors you will be able to determine which input style to use to import the file!
+
+	Regardless of the data structure and type of data, for SAS to read the data you must specify:
+	1)	Variable name in which to store the values
+	2)	Type of SAS variable
+	3)	Location of the data value
+
+
+* ----------------------------- *
+|   Comprehension Check 2.3.1   |
+* ----------------------------- *
+	Open the 'UT_Records.dat' data file in the Hypertension Study\1_Source folder
+	Question:  How is the data structured?  Column aligned *;
+
+
+
+
+*	SECTION 2.3.2 - IMPORTING COLUMN-ALIGNED DATA   *; RUN;
+
+*	"Column Input" is used to read in data that is 1) column-aligned and 2) standard data
+
+
+*	Illustration 1 - Importing ID, Gender, Ethnicity, and Race from the DM.txt File   *; RUN;
+
+*	Look at the structure of the data--the data are column-aligned!
+
+	In the INPUT statement, for every variable to be imported:
+	1)	Specify the variable name(s) of your choice! (Must satisfy naming conventions)
+	2)	Designate a character variable by following the name with a $ sign
+	3)	Specify the columns which contain the values
+	
+	In the 'Data Map - Cancer RCT.xlsx' document are the specifications for the variables
+		that we want to create
+	We want the following:
+
+	Name	Type	Length
+	------	----	------
+	ID		Num		8
+	GENDER	Char	6
+	ETHNIC	Char	22
+	RACE	Char	16
+	DOB		Num		8
+
+	Let's finish the code to create the first 4 variables ...   *;
+
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID			1-2
+			GENDER	$	3-8
+			ETHNIC	$	9-34
+			RACE	$	35-50;
+	RUN;
+
+*	When SAS compiles the INPUT statement, a slot is created in the PDV
+		for each variable read
+	Recall:  The descriptor portion of the output data set is created at the
+				end of the compilation phase   *;
+
+
+*	Illustration 2 - Specify Columns to Read Based on All Observations   *; RUN;
+
+*	Note:  If ID and GENDER were read in based only on the first observation, we could write:   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID			2
+			GENDER	$	3-6;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Be sure to specify columns precisely!   *;
+
+
+*	Illustration 3 - When Column-Aligned Data Is Not Precisely Aligned   *; RUN;
+
+*	Data can still be read in as long as:
+	1)	The specified columns contain the same variable values
+	2)	No column has values from different variables   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID			1-2
+			GENDER	$	3-7;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+01MALE
+2  MALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Additional Factors to Consider:
+		A - Determining How Values Are Separated 
+		B - Variable Type
+		C - Character Values with Embedded Spaces
+		D - Importing a Subset of Variables
+		E - Records Shorter than SAS Is Expecting
+		F - Length of Character Variables
+		G - Missing Values
+		H - Reading Non-Standard Data   *; RUN;
+
+
+
+*	Consideration A - Determining How Values Are Separated   *; RUN;
+
+
+*	Illustration A.1 - Column-Aligned Data Values May be Adjacent   *; RUN;
+
+*	Note that ID, Gender, and Ethnicity were adjacent for several observations
+		i.e. The values don't have to be separated!   *;
+
+
+*	Illustration A.2 - Columns May Be Read Multiple Times   *; RUN;
+
+*	This is not possible with delimited data   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID				1-2
+			GENDER		$	3-8
+			GENDERCD	$	3		/* Re-reading column 3 */
+			ETHNIC		$	9-30
+			ETHNICCD	$	9		/* Re-reading column 9 */
+			RACE		$	35-50;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration A.3 - Values May Be Read In Any Order (i.e. Can Differ from the Raw File)   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	GENDERCD	$	3
+			RACE		$	35-50
+			ID				1-2
+			ETHNIC		$	9-30;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration B - Variable Type   *; RUN;
+
+
+*	Illustration B.1 - Any Characters (e.g. Numbers) Can Be Read Into Character Variables   *; RUN;
+
+*	Goal:  Create ID as a character variable   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID		$	1-2
+			GENDER	$	3-8
+			ETHNIC	$	9-30
+			RACE	$	35-50;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration B.2 - Forgetting to Specify a Variable as Character   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID		1-2
+			GENDER	3-8
+			ETHNIC	9-30
+			RACE	35-50;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration C - Character Values with Embedded Spaces   *; RUN;
+
+
+*	Illustration C.1 - Character Values May Contain Embedded Spaces   *; RUN;
+
+*	Observe the values for the variable 'ETHNIC'   *;
+
+
+
+*	Consideration D - Importing a Subset of Variables   *; RUN;
+
+
+*	Illustration D.1 - You May Read Only the Values for Variables You'd Like to Keep   *; RUN;
+
+*	Goal:  Import only Gender and Race   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	GENDER	$	3-8
+			RACE	$	35-50;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration E - Records Shorter than SAS Is Expecting   *; RUN;
+
+
+*	Illustration E.1 - Values For an Observation "Spilling" to Another Record   *; RUN;
+
+*	NA for column-aligned data!   *;
+
+
+
+*	Consideration F - Length of Character Variables   *; RUN;
+
+
+*	Illustration F.1 - Character Variable Length Is Determined by the Number of Columns Read   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID				1-2
+			GENDER		$	3-8
+			GENDERCD	$	3
+			ETHNIC		$	9-30
+			RACE		$	35-50;
+	RUN;
+
+*	Check the length in the metadata for the data set just created Numeric values are always 8 characters  *;
+PROC CONTENTS DATA = WORK.Illus VARNUM;
+	RUN;
+
+
+
+*	Consideration G - Missing Values   *; RUN;
+
+
+*	Illustration G.1 - Columns Containing No Data Will Result In Missing Values   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID			1-2
+			GENDER	$	3-8;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+01
+  MALE
+03FEMALE
+;
+*	Note:  Incomplete records do not cause SAS to load the next record into the Input Buffer!   *;
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.2 - Blank Rows In the Data Rows Will Result in Blank Observations   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID			1-2
+			GENDER	$	3-8;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+
+
+03FEMALE
+
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration H - Reading Non-Standard Data   *; RUN;
+
+*	The only non-standard data in the DM.txt file is the birth date data   *;
+
+
+*	Illustration H.1 - Attempting to Read Non-Standard Data Using Column Input   *; RUN;
+
+*	Goal:  Read the date of birth as a numeric variable (the typical goal)   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID				1-2
+			GENDER		$	3-8
+			ETHNIC		$	9-30
+			RACE		$	35-50
+			DOB				51-60;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	NB: We need to provide SAS with instructions to read non-standard values into numeric variables!   *;
+
+*	Note:  We could've read DOB as a character variable
+			This looks good, but is not very useful!   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	ID				1-2
+			GENDER		$	3-8
+			ETHNIC		$	9-30
+			RACE		$	35-50
+			DOB			$	51-60;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.2 - Using Formatted Input to Read Non-Standard Data   *; RUN;
+
+*	The 2nd input style we now encounter is "Formatted Input"
+	Formatted Input provides SAS with instructions of how to read the values by specifying an informat
+		(INFORMAT is a contraction of INPUT FORMAT--a format applied when inputting data)
+		Part of the informat is the specification of how many columns to read
+
+	Regardless of the style of input used, we still need to specify:
+	1)	Variable name in which to store the values
+	2)	Type of SAS variable (now the $ will be part of the informat!)
+	3)	Location of the data value
+			With Formatted Input this is provided using:
+				1. Starting position (following the @ symbol), and
+				2. # of characters to read (provided in the informat)
+
+	The @ symbol instructs SAS to go to the specified column using "absolute pointer control"
+
+	Standard data may be read using the standard informats, which are:
+		w. for numeric data (e.g. 2. to read 2 numbers) [w represents the width!]
+	   $w. for character data (e.g. $2. to read 2 characters)
+
+	Below is Formatted Input code to create the first 4 variables   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	@1	ID		2.
+			@3	GENDER	$6.
+			@9	ETHNIC	$22.
+			@35	RACE	$16.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.3 - Reading Values Using Formatted Input with Absolute Pointer Control    *; RUN;
+
+*	This provides the same flexibility to read in selected variables as with Column Input
+	Goal:  Similar to Illustration A.3, just using Formatted Input   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	@3	GENDER	$6.
+			@35	RACE	$16.
+			@1	ID		2.
+			@9	ETHNIC	$22.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.4 - Reading Values Using Formatted Input with Relative Pointer Control    *; RUN;
+
+*	The + symbol uses "relative pointer control" to instruct SAS to advance the pointer X number of columns   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT		ID		2.
+				GENDER	$6.	/* The pointer doesn't need to be moved because it's in position to read the variable */
+				ETHNIC	$22. /* Ditto */
+			+4	RACE	$16.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.5 - Moving the Pointer Backwards When Using Relative Pointer Control    *; RUN;
+
+*	Goal:  Same as Illustration H.3, just using Relative Pointer Control   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	+2		GENDER	$6.
+			+26		RACE	$16.
+			+(-50)	ID		2.
+			+6		ETHNIC	$22.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.6 - Reading Non-Standard Data Using Formatted Input   *; RUN;
+
+*	To read non-standard data, you must also provide SAS with the instructions for reading the non-standard data.
+	This is contained in the informat, which also contains the number columns to read	*;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	@1	ID		2.
+			@3	GENDER	$6.
+			@9	ETHNIC	$22.
+			@35	RACE	$16.
+			@51	DOB		MMDDYY10.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Adding a FORMAT statement will make the DOB values easier to read!   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	@1	ID		2.
+			@3	GENDER	$6.
+			@9	ETHNIC	$22.
+			@35	RACE	$16.
+			@51	DOB		MMDDYY10.;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Note:  There are m-a-n-y ways to write dates, so many other informats are available!
+			Two of the most commonly used are MMDDYY and DATE9.
+	Note:  Despite the many variations of the MMDDYY values, they all have Month, Day, then Year
+			Similarly, the DATE9 values all have a numeric Day, a 3-letter Month, then Year   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Name	$10.
+			@12	DOB		MMDDYY10.
+			@25	BirthDt	DATE9.;
+	FORMAT	DOB BirthDt WORDDATE.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+King       07/18/1966   18JUL1966
+Carpenter  3/6/1937     6mar1937
+Cunningham 6/24/54      24Jun1954
+Washington 06251961     25JUN61
+O'Connor   080152       1aug52
+Montgomery 4-18-1949    18aPR49
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.7 - Additional Examples of Non-Standard Data   *; RUN;
+
+*	Dollar signs, commas, and percents are also non-standard numeric values (informat needed!)   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Name			$9.
+			@10	Salary			DOLLAR7.
+			@20	DaysOnJob		COMMA5.
+			@30	JobSatisfaction	PERCENT4.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+King     $38,000   185       90%
+Carpenter$51,000   1,288     100%
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration H.8 - Mixing Input Styles (using both Column and Formatted Input)   *; RUN;
+
+*	Note:  Non-standard data MUST be read in using Formatted Input
+		   Standard data may be read in using either Column Input or Formatted Input   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT		ID			1-2
+				GENDER	$	3-8
+			@9	ETHNIC				$22.
+				RACE	$	35-50
+			@51	DOB					MMDDYY10.;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Task:  Import the Data In the DM.txt File Into a SAS Data Set in the 'CanImpt' Library; RUN;
+DATA	CanImpt.DM;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/DM.txt";
+	INPUT	@1	ID		2.
+			@3	GENDER	$6.
+			@9	ETHNIC	$22.
+			@35	RACE	$16.
+			@51	DOB		MMDDYY10.;
+	RUN;
+
+PROC PRINT DATA = CanImpt.DM;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.3.2   |
+* ----------------------------- *
+	Goal:  Create a temporary data set named 'NFLTopPaid' which contains the following
+			3 variables:  Player, Salary, and BirthDt
+	Task:  Write the INPUT statement which will successfully read the in-stream data below
+			to create the 3 desired variables   *;
+DATA	WORK.NFLTopPaid;
+	INFILE	DATALINES;
+	INPUT	@1	NAME	$18.
+			@20	SALARY	DOLLAR11.
+			@32	BirthDt	DATE9.;
+	FORMAT	BirthDt WORDDATE.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+Russell Wilson     $35,000,000 29NOV1988
+Ben Roethlisberger $34,000,000 2MAR1982
+Aaron Rodgers      $33,500,000 2DEC1983
+;
+
+
+
+
+*	SECTION 2.3.3 - ADDITIONAL MATERIAL   *; RUN;
+
+*	The concepts learned to import data apply to exporting it as well!
+	Here we will be exporting to a raw file, creating column-aligned data
+	In general, we need to specify:
+		1)	Which columns to write the value to
+		2)	What value to write in those columns, and
+		3)	Any special instructions for displaying the value
+			e.g. To write a SAS date value in an interpretable manner
+
+	Note the similarities to what we've learned:
+	The INFILE statement specifies the file we IMport from
+	The FILE   statement specifies the file we EXport to
+
+	The INPUT statement specifies information about variables we're IMporting
+	The PUT   statement specifies information about variables we're EXporting
+
+	A _NULL_ data set is specified (DATA _NULL_) when we want to use the
+		DATA step, but don't need to create a data set
+		Remember, we're creating a raw data file!   *;
+
+
+*	Illustration 1 - Mixing Input Styles (using both Column and Formatted Input)   *; RUN;
+
+*	Goal:  Create a text file (.txt) containing the NJCC demographic data   *;
+DATA	_NULL_;
+	SET	CanImpt.DM;
+	FILE	"&CourseRoot/Cancer RCT/Data/Demog Export.txt";
+	PUT	@1	ID
+		@6	DOB		YYMMDDP10.
+		@19	GENDER
+		@28	ETHNIC
+		@53	RACE;
+	RUN;
+
+
+*	Illustration 2 - Using Column Specifications   *; RUN;
+
+*	Specifying columns may be used to write the values
+	Note:  Formats need to be specified to write any values
+		differently than the stored values   *;
+DATA	_NULL_;
+	SET	CanImpt.DM;
+	FILE	"&CourseRoot/Cancer RCT/Data/Demog Export 2.txt";
+	PUT		ID		1-2
+		@6	DOB				MMDDYY10.
+			GENDER	19-24
+			ETHNIC	28-49
+			RACE	53-68;
+	RUN;
+
+
+*	Illustration 3 - Including Text in Exported Data File   *; RUN;
+
+DATA	_NULL_;
+	SET	CanImpt.DM;
+	FILE	"&CourseRoot/Cancer RCT/Data/Demog Export with Text.txt";
+	PUT	@1	"Subject ID:"	@12	ID
+		@16	"Birth Date:"	@28	DOB		MMDDYY10.
+		@40	"Sex:"			@45	GENDER
+		@53	"Ethnicity:"	@64	ETHNIC
+		@88	"Race:"			@94	RACE	;
+	RUN;
+
+
+
+
+*	SECTION 2.3.4 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.3.1   |
+* ----------------------------- *
+	Open the 'UT_Records.dat' data file in the Hypertension Study\1_Source folder
+	Question:  How is the data structured?
+	Answer:  The data are column-aligned!   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.3.2   |
+* ----------------------------- *
+	Goal:  Create a temporary data set named 'NFLTopPaid' which contains the following
+			3 variables:  Player, Salary, and BirthDt
+	Task:  Write the INPUT statement which will successfully read the in-stream data below
+			to create the 3 desired variables   *;
+DATA	WORK.NFLTopPaid;
+	INFILE	DATALINES;
+	INPUT	@1	Player	$18.
+			@20	Salary	DOLLAR11.
+			@32	BirthDt	DATE9.;
+	FORMAT	BirthDt WORDDATE.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+Russell Wilson     $35,000,000 29NOV1988
+Ben Roethlisberger $34,000,000 2MAR1982
+Aaron Rodgers      $33,500,000 2DEC1983
+;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
