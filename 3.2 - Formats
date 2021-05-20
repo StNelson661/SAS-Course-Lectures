@@ -1,0 +1,910 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	3.2 - Formats.sas                                                       *
+*	PURPOSE:	Illustrate material in Chapter 3.2                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-08-08																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-18  SMN Added TOC & Comprehension Checks                        *
+*               2019-09-18  SMN Additional material included                            *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 3.2.1 - SAS Formats                                                     *
+*   	Section 3.2.2 - User-Defined Numeric Formats                                    *
+*   	Section 3.2.3 - User-Defined Character Formats                                  *
+*   	Section 3.2.4 - Creating Formats From a Control Data Set                        *
+*   	Section 3.2.5 - Storing User-Defined Formats                                    *
+*   	Section 3.2.6 - Accessing User-Defined Formats                                  *
+*   	Section 3.2.7 - Associating Formats with Variables                              *
+*   	Section 3.2.8 - Additional Material                                             *
+*   	Section 3.2.9 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+LIBNAME CanTabs    "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME HypImpt    "&CourseRoot/Hypertension Study/Data/2_Import";
+
+
+
+
+*	SECTION 3.2.1 - SAS FORMATS   *; RUN;
+
+*	Formats provide SAS with instructions on how to display values for variables
+	They do NOT change the actual data values!
+
+	SAS has a large library of formats for common data values
+	Use a FORMAT statement to apply a format to a variable   *;
+
+
+*	Illustration 1 - Using the FORMAT Statement   *; RUN;
+
+*	This illustrates 3 formats that SAS provides
+	Notice that the actual data values are unchanged   *;
+PROC PRINT	DATA = CanImpt.DM	NOOBS;
+	VAR	ID GENDER DOB;
+	FORMAT	ID		Z2.
+			GENDER	$1.
+			DOB		WORDDATE.;
+	RUN;
+
+
+*	Illustration 2 - Format Specification   *; RUN;
+
+*	Formats are specified using the following syntax:  <$>format<w>.<d>
+	NB:  'w' encompasses the entire width, not just the integer portion!   *;
+PROC PRINT	DATA = CanImpt.Lab_Data_Pt1;
+	VAR	Pt LabDate WBC HCT;
+	FORMAT	LabDate	MMDDYYP8.	/* The final 'P' stands for period (the delimiter) */
+			WBC		5.2
+			HCT		2.	;
+	RUN;
+*	Other separators include slashes (S), dashes (D), colons (C), blanks (B), and nothing (N)   *;
+
+*	Sometimes data values need to be changed before applying a format appropriately
+
+	Goal:  Display Hematocrit as a percentage
+	Note:  1 as a percent = 100%   *;
+PROC PRINT	DATA = CanImpt.Lab_Data_Pt1;
+	VAR	Pt HCT;
+	FORMAT	HCT		PERCENT7.1	;
+	RUN;
+
+*	First create the data values (in the scale of 1 = 100%)   *;
+DATA WORK.Illus;
+	SET	CanImpt.Lab_Data_Pt1;
+	HCTPct = HCT / 100;
+	RUN;
+
+*	Then apply the PERCENTw.d format   *;
+PROC PRINT	DATA = WORK.Illus;
+	VAR	Pt HCTPct;
+	FORMAT	HCTPct		PERCENT7.1	;
+	RUN;
+
+
+*	Illustration 3 - Formats Can Be Used When Writing Values To the Log   *; RUN;
+
+DATA	WORK.Illus;
+	SET	CanImpt.Lab_Data_Pt1;
+	PUTLOG	LabDate= MMDDYYD10.; * The final 'D' designates a dash delimiter (not Day) *;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.1   |
+* ----------------------------- *
+	The date of birth (DOB) variable in the 'CanImpt.DM' data set is not formatted
+		(and thus nearly impossible to see what the dates are)
+	Task:  Add a statement below to display DOB values so they appear as '18JUL1966' etc	*;
+PROC PRINT DATA = CanImpt.DM;
+	FORMAT dob Date9.;
+	RUN;
+
+
+*	Illustration 4 - Specifying the Width Used In a Format   *; RUN;
+
+*	If a number is not used at the end of a format, the default width is used
+	A number may be specified to control the value displayed
+
+	The default width of the DATEw format is 7   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	FORMAT	LabDate DATE.;
+	RUN;
+
+*	Specifying a width of 9 allows for a 4-digit year   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	FORMAT	LabDate DATE9.;
+	RUN;
+
+*	Specifying a width of 11 allows for a 4-digit year with separators   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	FORMAT	LabDate DATE11.;
+	RUN;
+
+
+
+
+*	SECTION 3.2.2 - USER-DEFINED NUMERIC FORMATS   *; RUN;
+
+*	Any custom format desired may be created using PROC FORMAT
+	The VALUE statement is used to create a user-defined format
+	The syntax is:
+		VALUE format-name
+				value-label-pair-1
+				value-label-pair-2
+				...					*;
+
+*	Note:  A period is not part of the format name (i.e. it's not used in the VALUE statement)   *;
+
+
+*	Illustration 1 - Creating Numeric Formats for Single Values   *; RUN;
+
+*	Note:  SAS automatically creates a catalog named 'Formats' in the WORK library to contain the format(s) created   *;
+PROC FORMAT;
+	VALUE	SexCd
+				0	= 'Male'
+				1	= 'Female';
+	RUN;
+
+
+*	Illustration 2 - Applying a User-Defined Format   *; RUN;
+
+*	A period is appended to the format name when applying the format!
+
+	The 'SexCd' format is now available and can be applied to a variable   *;
+PROC PRINT DATA = CanImpt.Demographics;
+	FORMAT	gender SexCd.; * Note: The format name doesn't need to match the variable name *;
+	RUN;
+
+
+*	Illustration 3 - Specifying Lists of Values In a Format   *; RUN;
+
+*	Lists of values are specified using comma-delimited values   *;
+PROC FORMAT;
+	VALUE	Cohorts
+				1,2,3			= 'Cohort 1'
+				4,5				= 'Cohort 2'
+				6,7,8,9,10		= 'Cohort 3';
+	RUN;
+*	Note:  Using a list may be a good practice when only integers are valid values   *;
+
+PROC PRINT DATA = CanImpt.DM;
+	VAR	ID GENDER;
+	FORMAT	ID Cohorts.;
+	RUN;
+*	Note:  Values not covered in the format appear as unformatted original values   *;
+
+
+*	Illustration 4 - Specifying Ranges of Values In a Format   *; RUN
+;
+*	Goal:  Create categories for a summary of Red Blood Cell count
+			Normal range:  4.2 - 5.4
+	Use a range of values when applying a format to a continuous variable   *;
+PROC FORMAT;
+	VALUE	RBCGrps
+				3.0 - 4.1	= 'Below Normal'
+				4.2 - 5.4	= 'Normal'
+				5.5 - 7.0	= 'Above Normal';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	FORMAT	Lab_Value RBCGrps.;
+	RUN;
+
+
+*	Illustration 5 - Removing Gaps from the Continuous Ranges   *; RUN;
+
+*	Note:  Ideally, there will be no gaps (uncovered values) or overlapping intervals
+
+	Step 1:  Make the start of each interval equal to the end of the previous interval
+	Step 2:  Use a less than (<) sign to indicate which value is NOT included in the interval
+
+	Note:  The greater than (>) sign is never used in these intervals   *;
+PROC FORMAT;
+	VALUE	RBCGrps
+				3.0   - < 4.2	= 'Below Normal'
+				4.2   -   5.4	= 'Normal'
+				5.4 < -   7.0	= 'Above Normal';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	FORMAT	Lab_Value RBCGrps.;
+	RUN;
+
+
+*	Illustration 6 - Accounting for Missing and Unexpected Values   *; RUN;
+
+*	The keyword OTHER handles any value that is not previously specified   *;
+PROC FORMAT;
+	VALUE	RBCGrps
+				.				= '*** Unknown ***'
+				3.0   - < 4.2	= 'Below Normal'
+				4.2   -   5.4	= 'Normal'
+				5.4 < -   7.0	= 'Above Normal'
+				OTHER			= '*** CHECK: Unexpected Value ***';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	FORMAT	Lab_Value RBCGrps.;
+	RUN;
+
+
+*	Illustration 7 - Incorporating Order Through Using Formatted Values    *; RUN;
+
+*	Sometimes frequency table results are desired to be displayed in a specific order
+	One way to accomplish this is to:
+		1)	Incorporate an ordering into the formatted values, and
+		2)	Use the ORDER = FORMATTED option in the PROC FREQ statement
+	Note:  Missing values are always displayed first if the MISSING option is used   *;
+PROC FORMAT;
+	VALUE	RBCGrps
+				.				= 'Unknown'
+				3.0   - < 4.2	= '1) Below Normal'
+				4.2   -   5.4	= '2) Normal'
+				5.4 < -   7.0	= '3) Above Normal'
+				OTHER			= 'Unexpected Value';
+	RUN;
+
+PROC FREQ
+		DATA	= CanImpt.Laboratory_2015
+		ORDER	= FORMATTED;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	TABLES	Lab_Value	/ NOCUM;
+	FORMAT	Lab_Value RBCGrps.;
+	RUN;
+
+
+*	Illustration 8 - Using the LOW and HIGH keywords   *; RUN;
+
+*	LOW includes missing values for character variables
+	However, LOW does not include missing values for numeric variables
+		(so a label should be applied to missing values!)   *;
+PROC FORMAT;
+	VALUE	RBCGrps
+				.				= 'Unknown'
+				LOW   - < 4.2	= '1) Below Normal'
+				4.2   -   5.4	= '2) Normal'
+				5.4 < -   HIGH	= '3) Above Normal'
+				OTHER			= 'Unexpected Value';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	FORMAT	Lab_Value RBCGrps.;
+	RUN;
+*	Warning:  The LOW and HIGH keywords can hide erroneous data
+	In this illustration, 51 is simply displayed as "Above Normal"
+	I recommend setting plausible ranges instead of using LOW and HIGH   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.2   |
+* ----------------------------- *
+	For men, the normal range of hemoglobin (HGB) is 13.5 to 17.5 g/dL
+	Task:  Create a numeric format named 'HGBRange' using the following definition:
+
+			Values				Label
+			---------------		----------------
+			missing				Missing
+			13.5 - 17.5			In Normal Range
+			any other value		Out of Normal Range
+
+	Then run the PROC PRINT step below to see the format applied   *;
+PROC FORMAT;
+	VALUE	HGBRange
+				[enter value-label pairs];
+	RUN;
+
+PROC PRINT DATA = CanImpt.Lab_Data_Pt5;
+	FORMAT HGB HGBRange.;
+	RUN;
+
+
+
+
+*	SECTION 3.2.3 - USER-DEFINED CHARACTER FORMATS   *; RUN;
+
+*	Character variables may be formatted using character formats
+	A $ character is needed as the first character in the name of a character format
+
+	Note:  The same name can be assigned to both a numeric and a character format.  In the catalog:
+		Numeric formats have a Type value of 'Format'
+		Character formats have a Type value of 'Formatc'   *;
+
+
+*	Illustration 1 - Creating Character Formats for Single Values   *; RUN;
+
+*	Note:  'SexCd' can be the name for both a numeric and a character format
+			Type is 'Formatc' in the catalog   *;
+PROC FORMAT;
+	VALUE	$SexCd
+				'M'	= 'Male'
+				'F'	= 'Female';
+	RUN;
+
+PROC PRINT DATA = HypImpt.UT_Records;
+	VAR	ID Inits GenderCode;
+	FORMAT	GenderCode $SexCd.;
+	RUN;
+
+
+*	Illustration 2 - Specifying Lists of Values In a Format   *; RUN;
+
+*	Note:  Be careful not to specify multiply values as 'A, B, O'--each value needs to be quoted   *;
+PROC FORMAT;
+	VALUE	$Race2Grps
+				'W'				= 'White'
+				'A', 'B', 'O'	= 'Other Race';
+	RUN;
+
+*	Note:  Values not covered in the format appear as unformatted original values   *;
+PROC PRINT DATA = HypImpt.UT_Records;
+	VAR	ID Inits RaceCode;
+	FORMAT	RaceCode $Race2Grps.;
+	RUN;
+
+
+*	Illustration 3 - Creating Character Formats to Assign Ranges of Values to Categories   *; RUN;
+
+PROC FORMAT;
+	VALUE	$Oncologist
+				'A' - 'M'	= 'Oncologist:  Dr. Adams'
+				'N'	- 'Z'	= 'Oncologist:  Dr. Zelenski';
+	RUN;
+
+DATA	WORK.Address;
+	SET	CanImpt.Address;
+	Last2	= Last; * Creating a copy of 'Last' so we can see both the unformatted & formatted values *;
+	RUN;
+
+PROC PRINT	DATA = WORK.Address;
+	VAR	ID Last Last2;
+	FORMAT	Last2 $Oncologist.;
+	RUN;
+*	Note the problem with the results   *;
+
+
+*	Illustration 4 - Using Inequalities to Remove "Gaps" Between Consecutive Character Values   *; RUN;
+
+PROC FORMAT;
+	VALUE	$Oncologist
+				'A' - < 'N'	= 'Oncologist:  Dr. Adams'
+				'N'	- 	'Z'	= 'Oncologist:  Dr. Zelenski';
+	RUN;
+
+PROC PRINT	DATA = WORK.Address;
+	VAR	ID Last Last2;
+	FORMAT	Last2 $Oncologist.;
+	RUN;
+
+*	Now let's apply the format to the Oregon subjects   *;
+DATA	WORK.PatInfo;
+	SET	CanImpt.PatInfo;
+	pat_name2	= pat_name;
+	RUN;
+
+PROC PRINT	DATA = WORK.PatInfo;
+	VAR	pat pat_name pat_name2;
+	FORMAT	pat_name2 $Oncologist.;
+	RUN;
+
+
+*	Illustration 5 - Using the HIGH Keyword to Handle 'van Buren'   *; RUN;
+
+PROC FORMAT;
+	VALUE	$Oncologist
+				'A' - < 'N'	= 'Oncologist:  Dr. Adams'
+				'N'	-  HIGH	= 'Oncologist:  Dr. Zelenski';
+	RUN;
+
+PROC PRINT	DATA = WORK.PatInfo;
+	VAR	pat pat_name pat_name2;
+	FORMAT	pat_name2 $Oncologist.;
+	RUN;
+*	Note:  'dePalma' is assigned to Dr. Zelenski instead of Dr. Adams   *;
+
+
+*	Illustration 6 - Taking into Account Lowercase Sorts After Uppercase   *; RUN;
+
+PROC FORMAT;
+	VALUE	$Oncologist
+				'A' - < 'N',	'a' - < 'n'	= 'Oncologist:  Dr. Adams'
+				'N'	- < 'a',	'n'	-  HIGH	= 'Oncologist:  Dr. Zelenski';
+	RUN;
+
+PROC PRINT	DATA = WORK.PatInfo;
+	VAR	pat pat_name pat_name2;
+	FORMAT	pat_name2 $Oncologist.;
+	RUN;
+
+
+*	Illustration 7 - Using a Format to Remove Unwanted Values   *; RUN;
+
+DATA	WORK.Illus; * Creating data to use in the illustrations *;
+	INFILE	DATALINES	DELIMITER = ',';
+	INPUT	ID
+			LastNm	:$10.	;
+	DATALINES;
+1,Richardson
+2,N/A
+3,van Buren
+4,Hernandez
+5,dePalma
+;
+
+*	In the above data set, there is a value of 'N/A' for one subject's name
+	If I don't want that value to display in a report, I can create a format to accomplish this by
+		taking advantage of the fact that values which don't appear in a format definition remain unchanged   *; 
+PROC FORMAT;
+	VALUE	$RemoveNA
+				'N/A'	= ' ';
+	RUN;
+
+*	Now I'll attempt to not display the 'N/A' by applying the format   *;
+PROC PRINT	DATA = WORK.Illus;
+	VAR	ID LastNm;
+	FORMAT	LastNm	$RemoveNA.;
+	RUN;
+
+
+*	Illustration 8 - Specifying the Length of a Character Format   *; RUN;
+
+*	Any number appearing at the end of a format name is a specification of the
+		number of characters to be displayed
+	This is why a format name cannot end with a number!   *;
+PROC PRINT	DATA = WORK.Illus;
+	VAR	ID LastNm;
+	FORMAT	LastNm	$RemoveNA10.;
+	RUN;
+
+
+
+
+*	SECTION 3.2.4 - CREATING FORMATS FROM A CONTROL DATA SET   *; RUN;
+
+*	When creating a format using a VALUE statement, the information provided is:
+	1)  Format name
+	2)	Values
+	3)	Labels
+
+	Formats may also be created from a control data set if it contains that information!
+	The control data set must have a minimum of the following variables:
+	1)	Variable named 'FMTNAME' containing the format name
+	2)	Variable named 'START' containing the values
+	3)	Variable named 'LABEL' containing the labels		*;
+
+
+*	Illustration 1 - Creating a Numeric Format from a Control Data Set   *; RUN;
+
+*	The data needed to create a format may already be in a data set
+	In that case, you may simply need to rename a few variables to be able to hvae
+		a control data set!
+
+	For example, this data set contains the information from which a format will be created *;
+DATA	WORK.RaceCodes;
+	INFILE	DATALINES;
+	INPUT	RaceCd		1
+			RaceNm	$	3-12;
+	DATALINES;
+1 White
+2 Black
+3 Asian
+4 Other Race
+;
+
+PROC PRINT DATA = WORK.RaceCodes;
+	RUN;
+
+*	Now we need to have the required variable names
+	1)	Variable containing the format name must be named 'FMTNAME'
+	2)	Variable containing the values must be named 'START'
+	3)	Variable containing the labels must be named 'LABEL'		*;
+DATA	WORK.RaceFmt;
+	FMTNAME	= 'RaceCd';
+	SET	WORK.RaceCodes	(	RENAME =	(	RaceCd	= START
+											RaceNm	= LABEL	)
+						);
+	RUN;
+
+PROC PRINT DATA = WORK.RaceFmt;
+	RUN;
+
+*	The CNTLIN= option creates formats without using a VALUE statement   *;
+PROC FORMAT CNTLIN = WORK.RaceFmt;
+	RUN;
+
+
+*	Illustration 2 - Creating a Character Format from a Control Data Set   *; RUN;
+
+*	This data set contains the information from which a format will be created *;
+DATA	WORK.StateCodes;
+	INFILE	DATALINES;
+	INPUT	StateCd $	1-2
+			StateNm	$	4-15;
+	DATALINES;
+DE Delaware
+ID Idaho
+NJ New Jersey
+NY New York
+OR Oregon
+PA Pennsylvania
+;
+
+*	For character formats, one of the following must be in place:
+	1)	The format name must start with a $, or
+	2)	An additional variable named 'TYPE' must be created and must contain a value of 'C'
+
+	This shows scenario 1   *;
+DATA	WORK.StateFmt;
+	FMTNAME	= '$StateName';
+	SET	WORK.StateCodes	(	RENAME =	(	StateCd	= START
+											StateNm	= LABEL	)
+						);
+	RUN;
+
+PROC PRINT DATA = WORK.StateFmt;
+	RUN;
+
+PROC FORMAT CNTLIN = WORK.StateFmt;
+	RUN;
+
+*	This shows scenario 2   *;
+DATA	WORK.StateFmt;
+	FMTNAME	= 'StateName';
+	TYPE	= 'C';
+	SET	WORK.StateCodes	(	RENAME =	(	StateCd	= START
+											StateNm	= LABEL	)
+					);
+	RUN;
+
+PROC PRINT DATA = WORK.StateFmt;
+	RUN;
+
+PROC FORMAT CNTLIN = WORK.StateFmt;
+	RUN;
+
+
+*	Illustration 3 - Using an External Control File   *; RUN;
+
+*	Creating formats with ranges require additional variables:
+	END 	specifies the ending value
+	SEXCL	specifies if the start value is excluded from the range
+	EEXCL	specifies if the ending value is excluded from the range
+	HLO		is used to designate the keywords HIGH, LOW, and OTHER   *;
+
+*	The following external Excel control file will be used to create formats
+	Note:  It saves steps to name the columns the required SAS names!   *;
+
+LIBNAME	CanFmts	XLSX	"&CourseRoot/Cancer RCT/Documents/Data Map - Cancer RCT.xlsx";
+
+*	This displays the data in the control data set   *;
+PROC PRINT DATA = CanFmts.'FORMAT CONTROL SHEET'N;
+	RUN;
+
+PROC FORMAT CNTLIN = CanFmts.'FORMAT CONTROL SHEET'N;
+	RUN;
+
+LIBNAME	CanFmts	CLEAR;
+
+
+
+
+*	SECTION 3.2.5 - STORING USER-DEFINED FORMATS   *; RUN;
+
+*	By default, formats are stored:
+		1)	In the WORK library
+		2)	In a catalog named 'Formats'
+	To store formats permanently:
+		1)	Use the LIBRARY= option to specify a desired library location
+		2)	Specify the desired catalog name as the 2nd-level name   *;
+
+
+*	Illustration 1 - Saving User-Defined Formats (i.e. Creating "Permanent" Formats)   *; RUN;
+
+*	Goal:  Store user-defined formats:
+		1)	In the CanTabs library
+		2)	In a catalog named 'PancFormats'   *;
+
+LIBNAME	CanFmts	XLSX	"&CourseRoot/Cancer RCT/Documents/Data Map - Cancer RCT.xlsx";
+PROC FORMAT
+		CNTLIN	= CanFmts.'FORMAT CONTROL SHEET'N
+		LIBRARY	= CanTabs.CanFormats;
+	RUN;
+LIBNAME	CanFmts	CLEAR;
+
+
+*	Illustration 2 - Using PROC CATALOG to View Entries In SAS Catalogs   *; RUN;
+
+*	A SAS catalog is a special SAS file that stores different types of information
+		in smaller units called catalog entries
+	Formats are an example of entries stored within a catalog
+
+	Goal:  View the list of formats in the CanTabs.CanFormats catalog   *;
+PROC CATALOG
+		CATALOG	= CanTabs.CanFormats;
+	CONTENTS;
+	QUIT;
+
+
+*	Illustration 3 - Using the FMTLIB Option to View Format Definitions   *; RUN;
+
+*	The FMTLIB option may be used to document the formats in a catalog
+		i.e. it will display the format's value-label pairs   *;
+PROC FORMAT
+		LIBRARY	= CanTabs.CanFormats
+		FMTLIB;
+	RUN;
+
+*	To restrict the formats displayed to only those desired, use the SELECT statement
+
+	Goal:  Display the format specifications for the 'AgeDecades' and 'GenderCd' formats
+	Note:  Only the format names are needed (i.e. no periods)   *;
+PROC FORMAT
+		LIBRARY	= CanTabs.CanFormats
+		FMTLIB;
+	SELECT	AgeDecades $GenderCd;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.5   |
+* ----------------------------- *
+	A format named 'YesNo' is created below
+	Task:  Add code which will store the format in a catalog named 'MyFormats' in the WORK library   *;
+PROC FORMAT library= WORK.MyFormats;
+	VALUE	YesNo 
+				0 		= 'No'
+				1 		= 'Yes'
+				OTHER	= 'Unexpected Value';
+	RUN;
+	
+
+
+
+*	SECTION 3.2.6 - ACCESSING USER-DEFINED FORMATS   *; RUN;
+
+*	Run the following PROC step to delete the formats from the WORK.Formats catalog   *;
+PROC CATALOG
+		CATALOG = WORK.Formats
+		KILL;
+	QUIT;
+
+*	By default, SAS will search for a catalog named 'Formats' in:
+	1)	The WORK library
+	2)	A library given the libref of 'LIBRARY'	(if that libref is assigned)
+
+	Therefore, if you have created permanent formats (or temporary formats in a catalog
+		not named 'Formats'), then you must direct SAS to where they are	*;
+
+
+*	Illustration 1 - Attempting to Use a User-Defined Format    *; RUN;
+
+*	Goal:  Apply the 'GenderCd' format to the 'GenderCode' variable in the 'HypImpt.Src_UT_Records' data set   *;
+PROC PRINT DATA = HypImpt.UT_Records;
+	VAR	ID Inits GenderCode;
+	FORMAT	GenderCode $GenderCd.;
+	RUN;
+*	This didn't work because the $GenderCd format isn't in the WORK.Formats or LIBRARY.Formats catalogs   *;
+
+
+*	Illustration 2 - Specifying Where SAS Should Search for Formats    *; RUN;
+
+*	The FMTSEARCH option specifies folder(s) to search for user-defined formats   *;
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats);
+
+PROC PRINT DATA = HypImpt.UT_Records;
+	VAR	ID Inits GenderCode;
+	FORMAT	GenderCode $GenderCd.;
+	RUN;
+
+
+*	Illustration 3 - Controlling the Order in Which SAS Searches Libraries    *; RUN;
+
+*	The default order is WORK, LIBRARY, then any specified in the FMTSEARCH= option
+	To force SAS to use the desired permanent formats first specify the following:		*;
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats	WORK LIBRARY);
+
+
+
+
+*	SECTION 3.2.7 - ASSOCIATING FORMATS WITH VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Using the FORMAT Statement to Associate Formats with Variables    *; RUN;
+
+*	Goal:  Associate the 'AEGrade' format with the 'Grade' variable   *;
+DATA	WORK.Illus;
+	SET	CanImpt.AELog;
+	FORMAT	Grade AEGrade.;
+	RUN;
+
+*	This will display the format is associated with the 'Grade' variable
+	Notice that no FORMAT statement is used   *;
+PROC PRINT DATA = WORK.Illus;
+	VAR	SubjID AEDescr Grade;
+	RUN;
+
+
+*	Illustration 2 - Not Using an Associated Format   *; RUN;
+
+*	To not use any format when a format is associated with a variable,
+		use a FORMAT statement and specify the variable but no format   *;
+PROC PRINT DATA = WORK.Illus;
+	VAR	SubjID AEDescr Grade;
+	FORMAT	Grade;
+	RUN;
+
+*	Illustration 3 - Using the NOFMTERR option when the format is unavailable    *; RUN;
+
+*	When you try to open a data set which has a variable associated with a format
+		but the format is not available, the data set won't open
+	The 'NOFMTERR' option will allow you to still open the data set and view
+		the unformatted values   *;
+OPTIONS	NOFMTERR;
+
+
+
+
+*	SECTION 3.2.8 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - Nested Formats   *;
+
+*	Formats may be nested within other formats
+	Place an existing format (which is to be nested) within square brackets in the
+		definition of the outer format
+
+	Goal:  Display dates as follows:
+			Time Period			Display
+			-------------		---------------------
+			Prior to 2016		YYYY
+			Jan-Aug 2016		JAN2016 etc
+			Sep-Dec 2016		September 1, 2016 etc
+
+	This will be accomplished by nesting 3 formats within our 'DiffDates' format   *;
+PROC FORMAT;
+	VALUE	DiffDates
+				.							= 'Missing Date'
+				LOW			 - '31DEC2015'D	= [YEAR4.]
+				'01JAN2016'D - '31AUG2016'D = [MONYY7.]
+				'01SEP2016'D - '31DEC2016'D = [WORDDATE.]
+				OTHER						= 'Unexpected Value';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Scans;
+	VAR	SubjID ScanDtMon6;
+	FORMAT ScanDtMon6 DiffDates.;
+	RUN;
+
+
+*	Illustration 2 - Picture Formats   *;
+
+*	Picture formats are used to create a template for printing numbers
+
+	Goal:  A common convention for printing p-values is as follows:
+	
+	P-Value		Display
+	----------	----------
+	< 0.001		< 0.001
+	0.001-0.10	3 decimal places
+	> 0.10		2 decimal places
+
+	A picture format could be created to display p-values according to this convention
+
+	Below is a sample data set containing fictitious p-values   *;
+DATA WORK.RegResults;
+	INFILE	DATALINES;
+	INPUT	Parameter $
+			PValue;
+	DATALINES;
+Beta0 0.799925
+Beta1 0.000347
+Beta2 0.174882
+Beta3 0.056103
+Beta4 0.394125
+;
+
+PROC FORMAT;
+	PICTURE	pVals
+				0		-	< 0.001	= '< 0.001' (NOEDIT)
+				0.001	-	0.10	= '9.999'
+				0.10	-	1		= '9.99';
+	RUN;
+
+PROC PRINT DATA = WORK.RegResults;
+	FORMAT	PValue pVals.;
+	RUN;
+
+
+*	Illustration 3 - Using a Picture Format to Solve 3.2.1 Illustration 2   *;
+
+*	Instead of adjusting the value, you could define a picture format to display
+		a % sign after the value, as shown below   *;
+PROC FORMAT;
+	PICTURE	AddPct
+				LOW - HIGH	= '99.99%';
+	RUN;
+
+PROC PRINT	DATA = CanImpt.Lab_Data_Pt1;
+	VAR	Pt HCT;
+	FORMAT	HCT		AddPct.	;
+	RUN;
+
+
+
+
+*	SECTION 3.2.9 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.1   |
+* ----------------------------- *
+	The date of birth (DOB) variable in the 'CanImpt.DM' data set is not formatted
+		(and thus nearly impossible to see what the dates are)
+	Task:  Add a statement below to display DOB values so they appear as '18JUL1966' etc	*;
+PROC PRINT DATA = CanImpt.DM;
+	FORMAT DOB DATE9.;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.2   |
+* ----------------------------- *
+	For men, the normal range of hemoglobin (HGB) is 13.5 to 17.5 g/dL
+	Task:  Create a numeric format named 'HGBRange' using the following definition:
+
+			Values				Label
+			---------------		----------------
+			missing				Missing
+			13.5 - 17.5			In Normal Range
+			any other value		Out of Normal Range
+
+	Then run the PROC PRINT step below to see the format applied   *;
+PROC FORMAT;
+	VALUE	HGBRange
+				.			= 'Missing'
+				13.5 - 17.5 = 'In Normal Range'
+				OTHER		= 'Out of Normal Range';
+	RUN;
+
+PROC PRINT DATA = CanImpt.Lab_Data_Pt5;
+	FORMAT HGB HGBRange.;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.2.5   |
+* ----------------------------- *
+	A format named 'YesNo' is created below
+	Task:  Add code which will store the format in a catalog named 'MyFormats' in the WORK library   *;
+PROC FORMAT LIBRARY = WORK.MyFormats;
+	VALUE	YesNo
+				0 		= 'No'
+				1 		= 'Yes'
+				OTHER	= 'Unexpected Value';
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
