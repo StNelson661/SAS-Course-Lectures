@@ -1,0 +1,1044 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	4.5 - Re-Structuring Data.sas                                           *
+*	PURPOSE:	Illustrate material in Chapter 4.5                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-11-01																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	[Enter data set name(s)]                                                *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-05  SMN Added TOC & Comprehension Checks                        *
+*               2019-11-05  SMN Re-structured, additions, and major edits               *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 4.5.1 - Creating Multiple Data Sets Using OUTPUT Statements             *
+*   	Section 4.5.2 - Creating "Long" Data from "Wide" Data (Wide-to-Long)            *
+*   	Section 4.5.3 - Creating "Wide" Data from "Long" Data (Long-to-Wide)            *
+*   	Section 4.5.4 - Additional Material                                             *
+*   	Section 4.5.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+LIBNAME CanTabs    "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME HypImpt    "&CourseRoot/Hypertension Study/Data/2_Import";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 4.5.1 - CREATING MULTIPLE DATA SETS USING OUTPUT STATEMENTS   *; RUN;
+
+
+*	Illustration 1 - Multiple Data Sets In the DATA Statement   *; RUN;
+
+*	Listing multiple data sets in the DATA statement creates multiple data sets
+	Note:  When no OUTPUT statements are used, each observation goes to all data sets listed   *;
+DATA	WORK.Illus
+		WORK.Illus2;
+	SET	CanImpt.Scans;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus2;
+	RUN;
+
+
+*	Illustration 2 - Conditionally Outputting Observations   *; RUN;
+
+*	Observations may be output to data sets conditionally based on evaluating 1 or more expressions   *;
+DATA	WORK.Scans_Site1
+		WORK.Scans_Site2;
+	SET	CanImpt.Scans;
+
+	IF			SUBSTR(SubjID, 1, 1) = '1'	THEN	OUTPUT WORK.Scans_Site1;
+		ELSE IF SUBSTR(SubjID, 1, 1) = '2'	THEN	OUTPUT WORK.Scans_Site2;
+
+	RUN;
+
+TITLE1 "Site 1 Scans";
+PROC PRINT DATA = WORK.Scans_Site1;
+	RUN;
+
+TITLE1 "Site 2 Scans";
+PROC PRINT DATA = WORK.Scans_Site2;
+	RUN;
+
+
+*	Illustration 3 - Multiple Data Sets in the OUTPUT Statement   *; RUN;
+
+*	The OUTPUT statement may be used to send observations to multiple data sets
+	When the OUTPUT statement doesn't specify a data set the observation goes to all data sets   *;
+
+*	Goal:  Create data sets containing
+			1) Site 2 observations, and
+			2) All observations   *;
+DATA	WORK.Scans_Site2
+		WORK.AllScans;
+	SET	CanImpt.Scans;
+
+	IF SUBSTR(SubjID, 1, 1) = '2'	THEN	OUTPUT WORK.Scans_Site2 WORK.AllScans;
+		ELSE								OUTPUT WORK.AllScans;
+
+*	This coding would accomplish the same thing   *;
+/*	IF SUBSTR(SubjID, 1, 1) = '1'	THEN	OUTPUT WORK.AllScans;*/
+/*		ELSE								OUTPUT;*/
+
+	RUN;
+
+TITLE1 "Site 2 Scans";
+PROC PRINT DATA = WORK.Scans_Site2;
+	RUN;
+
+TITLE1 "All Scans";
+PROC PRINT DATA = WORK.AllScans;
+	RUN;
+
+
+*	Illustration 4 - Different Variables May Be Sent to Different Data Sets   *; RUN;
+
+DATA	WORK.Scans_Mon0	(	KEEP	=	SubjID ScanDtMon0 LesionSumCmMon0	)
+		WORK.Scans_Mon6	(	KEEP	=	SubjID ScanDtMon6 LesionSumCmMon6	);
+	SET	CanImpt.Scans;
+	RUN;
+
+TITLE1 "Baseline (Month 0) Data";
+PROC PRINT DATA = WORK.Scans_Mon0;
+	RUN;
+
+TITLE1 "Month 6 Data";
+PROC PRINT DATA = WORK.Scans_Mon6;
+	RUN;
+TITLE;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.5.1   |
+* ----------------------------- *
+	Task:  From the 'SASHelp.Class' data set, create the following 2 data
+			sets, each with the specified variables.
+			The 'Females' data set should only contain females (Sex='F') and
+			the 'Males' data set should only contain males (Sex='M')!
+
+			Data Sets:	WORK.Females		WORK.Males
+						------------		----------
+			Variables:	Name				Name
+						Height				Age			*;
+DATA	WORK.Females	(KEEP = Name Height)
+		WORK.Males		(KEEP = Name Age);
+	SET	SASHelp.Class;
+	IF			Sex = 'F' THEN OUTPUT Work.Females;
+		ELSE IF Sex = 'M' THEN OUTPUT Work.Males;
+	RUN;
+
+TITLE1 "Female Data";
+PROC PRINT DATA =WORK.Females;
+	RUN;
+
+TITLE1 "Male Data";
+PROC PRINT DATA = WORK.Males;
+	RUN;
+TITLE;
+
+
+
+
+*	SECTION 4.5.2 - CREATING "LONG" DATA FROM "WIDE" DATA   *; RUN;
+
+*	Re-structuring a data set is sometimes referred to as "rotating" a data set
+
+	The observations and variables create a "rows" by "columns" matrix
+	A transpose simply converts rows to column and vice versa
+
+	The 'CanImpt.Lab_Data_Pt1' data set is in a 'Wide' format, i.e.
+
+	Pt	LabDate		WBC		RBC		HGB		HCT
+	--	---------	----	----	----	----
+	1	28JUL2015	10.8	 4.1	12.1	49.3
+	1	18AUG2015	 9.4	 3.8	11.4	38.5
+	...	...			...		...		...		...
+
+	Goal:  Re-structure the data set into a 'Long' format, i.e.
+	Pt	LabDate		LabTest	LabValue
+	--	---------	-------	--------
+	1	28JUL2015	WBC		10.8
+	1	28JUL2015	RBC		 4.1
+	1	28JUL2015	HGB		12.1
+	1	28JUL2015	HCT		49.3
+	2	18AUG2015	WBC		 9.4
+	2	18AUG2015	RBC		 4.1
+	2	18AUG2015	HGB		11.4
+	2	18AUG2015	HCT		38.5
+	...	...			...		...	
+
+	Data may be re-structured using either PROC TRANSPOSE or the DATA step
+	PROC TRANSPOSE often requires less code
+		(variable names will just need to be specified in a few statements)
+	The DATA step is preferred if you need to do other data manipulation
+		(e.g. creating new variables, conditional processing, etc.)
+	The DATA step may be easier to manage if you understand how data is
+		processed during execution through the PDV   *;
+
+
+*	Illustration 1 - A Basic Transposition of Data   *; RUN;
+
+*	PROC TRANSPOSE can be used to re-structure a data set
+	By default, PROC TRANSPOSE will transpose each numeric variable into a row and store the
+		transposed data set into a temporary data set named 'DataN' (N = sequential numbers)
+
+
+	When PROC TRANSPOSE transposes the rows and columns, the new columns are assigned
+		generic names by default:
+		_NAME_, which contains the list of variables transposed, and
+		COL1 -- COLn, which used to be the rows   *;
+PROC PRINT DATA = SASHelp.Class;
+	RUN;
+
+PROC TRANSPOSE	DATA = SASHelp.Class;
+	RUN;
+
+PROC PRINT DATA = Data1;
+	RUN;
+
+
+*	Illustration 2 - Using the OUT= Option   *; RUN;
+
+*	The OUT= option names a data set to contain the transposed data   *;
+PROC TRANSPOSE
+		DATA	= SASHelp.Class
+		OUT		= WORK.Class_Tran;
+	RUN;
+
+PROC PRINT DATA = WORK.Class_Tran;
+	RUN;
+
+
+*	Illustration 3 - Transposing a Single Variable Using PROC TRANSPOSE   *; RUN;
+
+*	First, let's look at the 'WBC' variable in the 'CanImpt.Lab_Data_Pt1' data set   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	VAR WBC;
+	RUN;
+
+*	The 'WBC' values are currently in a column (i.e. a 4x1 matrix)
+	The VAR statement lists the variables to be transposed (i.e. turned into rows)   *;
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.Lab_Data_Pt1T;
+	VAR	WBC;
+	RUN;
+
+PROC PRINT DATA = WORK.Lab_Data_Pt1T;
+	RUN;
+*	Now the 'WBC' values are in a row (i.e. a 1x4 matrix)   *;
+
+
+*	Illustration 4 - Transposing Multiple Variables Using PROC TRANSPOSE   *; RUN;
+
+*	This transposes a 4x4 matrix into a 4x4 matrix   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	RUN;
+
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.Lab_Data_Pt1T;
+	VAR	WBC -- HCT;
+	RUN;
+
+PROC PRINT DATA = WORK.Lab_Data_Pt1T;
+	RUN;
+
+
+*	Illustration 5 - Using the BY Statement to Specify 1 x p Matrices   *; RUN;
+
+*	The BY statement transposes data within groups
+
+	Using BY-group processing will transpose each BY-group individually
+	In this case, each BY-group is a single row
+		(because our data has 1 row per unique LabDate value)
+
+	Recall:  To use BY-group processing, data must be ordered by the variables in the BY statement
+
+	This shows the data before the transposition   *;
+PROC PRINT DATA = CanImpt.Lab_Data_Pt1;
+	RUN;
+
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.LabsPt1_Long;
+	VAR	WBC -- HCT;
+	BY	LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+
+*	Illustration 6 - Including Other Variables in the Output   *; RUN;
+
+*	Other variables will be included in the output data set when named in the BY statement
+	In this illustration, I am adding the 'Pt' variable to the BY statement
+	Note:  This approach is typically fine in a "wide" to "long" conversion
+			because when the data is "wide" the other variables can't vary
+			within each level of the BY variable   *;
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.LabsPt1_Long;
+	VAR	WBC -- HCT;
+	BY	Pt LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+*	Another approach is to use the COPY statement
+	However, variables in the COPY statement are kept but not transposed   *;
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.LabsPt1_Long;
+	VAR	WBC -- HCT;
+	BY	LabDate;
+	COPY	Pt;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+*	Side Note:  Using COPY in "long" to "wide" re-structuring also doesn't help
+		because since the variable is not transposed, the data set remains "long"   *;
+
+
+*	Illustration 7 - Renaming the Transposed Column   *; RUN;
+
+*	To finalize the output data set we will need to rename 2 variables
+		and drop an un-wanted variable
+	The NAME= option specifies the name for the variable that contains the name of
+		the variable(s) being transposed
+		(i.e. it names the column that identifies the source variable(s)
+
+	As each variable in the VAR statement will become a row, each of these variable
+		names will appear as a value in the _NAME_ variable
+		So when using the NAME= option, think about choosing a name which would aptly
+		describe the group of variables named in the VAR statement!   *;
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.LabsPt1_Long	(	DROP	=	_LABEL_
+										RENAME	= (	COL1	= LabValue	)
+									)
+		NAME	= LabTest;
+	VAR	WBC -- HCT;
+	BY	Pt LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+*	Alternatively, you could rename the name of the _NAME_ variable instead of
+		using the NAME= option   *;
+PROC TRANSPOSE
+		DATA	= CanImpt.Lab_Data_Pt1
+		OUT		= WORK.LabsPt1_Long	(	DROP	=	_LABEL_
+										RENAME	= (	_NAME_	= LabTest
+													COL1	= LabValue	)
+									);
+	VAR	WBC -- HCT;
+	BY	Pt LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+
+*	Illustration 8 - Re-Structuring Data Using the DATA Step   *; RUN;
+
+*	To re-structure the data to be "long", we need to turn each row into 4 new rows
+	Recall:  The OUTPUT statement may be used to create rows!
+	We want to create 2 new variables:
+		LabTest will contain the value identifying which test was performed
+		LabValue will contain the test value
+	NB:  LabValue is worthless without LabTest!   *;
+DATA WORK.LabsPt1_Long;
+	KEEP	Pt LabDate LabTest LabValue;
+	SET CanImpt.Lab_Data_Pt1;
+
+	LabTest = 'WBC';
+	LabValue = WBC;
+	OUTPUT;
+
+	LabTest = 'RBC';
+	LabValue = RBC;
+	OUTPUT;
+
+	LabTest = 'HGB';
+	LabValue = HGB;
+	OUTPUT;
+
+	LabTest = 'HCT';
+	LabValue = HCT;
+	OUTPUT;
+
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+
+*	Illustration 9 - Re-Structuring Data Using the DATA Step and a DO Loop   *; RUN;
+
+*	We can accomplish what was done above more efficiently by using a DO loop!
+
+	Strategy:
+		1)	Define an ARRAY containing the variables whose values we want to transpose
+		2)	"Step through" the ARRAY using a DO loop
+		3)	Use an OUTPUT statement inside the DO loop to create an observation
+				from each value (this is what makes the data "long"!)
+		4)	Don't keep the now un-needed "wide" variables   *;
+DATA	WORK.LabsPt1_Long;
+	SET	CanImpt.Lab_Data_Pt1;
+*	KEEP	Pt LabDate LabTest LabValue;
+
+	ARRAY	TestNames {4} $ 3 _TEMPORARY_	('WBC', 'RBC', 'HGB', 'HCT');
+	ARRAY	LabVals {4}	WBC -- HCT;
+
+	DO	i = 1 TO DIM(LabVals);
+		LabTest	= TestNames{i};
+		LabValue	= LabVals{i};
+		OUTPUT	WORK.LabsPt1_Long;
+	END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.5.2   |
+* ----------------------------- *
+	Below is a data set of years different teams have won the Super Bowl
+		(in "wide" format);
+DATA WORK.SuperBowlWins;
+	INFILE DATALINES DELIMITER=',' MISSOVER;
+	INPUT	Team $ Year1 Year2 Year3 Year4 Year5 Year6;
+	DATALINES;
+Cowboys,1972,1978,1993,1994,1996
+Patriots,2002,2004,2005,2015,2017,2019
+Steelers,1975,1976,1979,1980,2006,2009
+;
+
+PROC PRINT DATA = WORK.SuperBowlWins;
+	RUN;
+
+*	Task:  Re-structure the data set to be in "long" format, which will look like:
+	Team		Year
+	--------	----
+	Cowboys		1972
+	Cowboys		1978
+	...			...
+	Steelers	2009   *;
+
+/* Option 1:  Use PROC TRANSPOSE */
+PROC TRANSPOSE
+		DATA = WORK.SuperBowlWins
+		OUT	 = WORK.SBWinsLong	(	DROP	= _NAME_
+									RENAME	= (	[finish option]	)
+								);
+	BY	[finish statement];
+	VAR	[finish statement];
+	RUN;
+
+/* Option 2:  Use the DATA step */
+DATA WORK.SBWinsLong;
+	SET WORK.SuperBowlWins;
+	BY Team;
+	ARRAY	Years{*} Year1 - Year6;
+	DO i = 1 TO [finish statement];
+		[enter statement];
+		[enter statement];
+	END;
+	DROP i Year1 - Year6;
+	RUN;
+
+PROC PRINT DATA = WORK.SBWinsLong;
+	RUN;
+
+
+
+
+*	SECTION 4.5.3 - CREATING "WIDE" DATA FROM "LONG" DATA   *; RUN;
+
+*	Now I will reverse the process to turn the 'WORK.LabsPt1_Long' data set into
+		a "wide" data set named 'WORK.LabsPt1_Wide' structured like the original data set   *;
+
+
+*	Illustration 1 - Using PROC TRANSPOSE   *; RUN;
+
+*	Let's look at the long data   *;
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+*	Realize that we want to make each date's 4x1 column into a 1x4 row
+		(i.e. we don't want to end up with a single 1x16 row!)
+	To accomplish this we will put 'LabDate' in the BY statement   *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_Wide	(	DROP	= _NAME_	);
+	VAR	LabValue; * This is a 4x1 matrix within each value of 'LabDate' *;
+	BY	Pt LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 2 - Naming Transposed Variables Using the PREFIX= Option   *; RUN;
+
+*	The PREFIX= option allow the specification of a prefix for the transposed variables
+		(note that the default prefix is 'COL')   *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_Wide	(	DROP	= _NAME_	)
+		PREFIX	= LabVal;
+	VAR	LabValue;
+	BY	Pt LabDate;
+	RUN;
+*	Note:  In Wide-to-Long transformations I rarely use the PREFIX= option because typically
+			a single column is being created
+			(so I name that column using the RENAME= data set option)   *;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 3 - Naming Transposed Variables Using the RENAME= Data Set Option   *; RUN;
+
+*	We could also change the variable names using the RENAME= data set option   *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_Wide	(	DROP	= _NAME_
+										RENAME	= (	COL1	= WBC
+													COL2	= RBC
+													COL3	= HGB
+													COL4	= HCT	)
+									);
+	VAR	LabValue;
+	BY	Pt LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 4 - Naming Transposed Variables Using the ID Statement   *; RUN;
+
+*	The ID statement specifies which variable's values should be used as
+		the names of the transposed variables.
+	When performing a Long-to-Wide transformation, there SHOULD be a variable whose
+		values identify each value (such as our 'LabTest' variable)!
+		Using such a variable in the ID statement is very useful
+			(i.e. it obviates the need for renaming several variables!)
+	When performing a Wide-to-Long transformation, there is often not a variable which
+		would be useful in an ID statement (so I typically don't use the ID statement then)
+	If the ID variable is numeric, underscores will precede the value in the variable name
+
+	Note:  Values of the variable(s) in the ID statement must be unique within BY groups
+			(because you can't have multiple variables with the same name in a data set,
+				which is what would be attempted in the transposed data set!)   *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_Wide	(	DROP	= _NAME_	);
+	VAR	LabValue;
+	BY	Pt LabDate;
+	ID	LabTest;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 5 - Using the PREFIX= Option with the ID Statement   *; RUN;
+
+*	This shows another option for naming the transposed variables
+		(creating variable names using the combination of a prefix and variable value) *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_Wide	(	DROP	= _NAME_	)
+		PREFIX	= LabVal_;
+	VAR	LabValue;
+	BY	Pt LabDate;
+	ID	LabTest;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 6 - Using the ID Statement with Multiple Variables   *; RUN;
+
+*	Suppose within each subject we'd like all the values to be in a single observation
+	Using the statement 'ID LabTest' won't work because the values of LabTest aren't
+		unique within each subject (i.e. every subject has several values of 'WBC' etc.
+
+	Multiple variables (e.g. LabTest and LabDate) can be specified to create unique
+		combinations --> unique variable names
+	The concatenated values will become the variable names   *;
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_SuperWide	(	DROP	= _NAME_	);
+	VAR	LabValue;
+	BY	Pt;
+	ID	LabTest LabDate;
+	FORMAT	LabDate YYMMDDD10.;
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_SuperWide;
+	RUN;
+
+
+*	Illustration 7 - Re-Structuring Data Using the DATA Step   *; RUN;
+
+*	Strategy:
+		1)	Create 4 new variables
+				I'll do this with 4 assignment statement
+
+		2)	We want to keep 1 final row for each block of incoming 4 rows
+			2A) The BY statement will create LAST.LabDate (to identify the rows to keep)
+			2B) Use the RETAIN statement to retain values within each lab date
+					(so the final row will be populated!)
+			2C) Use the IF statement to keep the last row for each lab date
+
+		3)	Each block should not contain the previous block's data
+			Use the CALL MISSING routine to re-set all variable values to missing   *;
+DATA	WORK.LabsPt1_Wide;
+	KEEP	Pt LabDate WBC -- HCT;
+	SET	WORK.LabsPt1_Long;
+	BY	Pt LabDate;
+
+	RETAIN	WBC RBC HGB HCT;
+
+	IF	FIRST.LabDate = 1	THEN	CALL MISSING(WBC, RBC, HGB, HCT);
+
+	IF			LabTest = 'WBC' THEN WBC = LabValue;
+		ELSE IF LabTest = 'RBC'	THEN RBC = LabValue;
+		ELSE IF LabTest = 'HGB'	THEN HGB = LabValue;
+		ELSE IF LabTest = 'HCT'	THEN HCT = LabValue;
+
+	IF	LAST.LabDate = 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 8 - Re-Structuring Data Using the DATA Step - Using an Index Variable   *; RUN;
+
+*	Strategy:
+		1)	The new "wide" variables can be created with the ARRAY statement
+				I will create an array named 'LabVbls' which creates these 4 variables
+
+		2)	Using an ARRAY allows us to reference each variable with an index value
+				(i.e. In our example with values 1, 2, 3, and 4)
+				So LabVbls{2} would be a reference to the 'RBC' variable, etc.
+			2A) Specifying initial values will cause the variables to be RETAINed
+					(so the RETAIN statement is no longer needed)
+
+		3)	We therefore need to create an index variable with numeric values of 1-4
+				so that we can reference our new variables using an index
+				I will create a variable named 'Index' with values of
+					1 for 'LabTest' values of 'WBC'
+					2 for 'LabTest' values of 'RBC'
+					3 for 'LabTest' values of 'HGB'
+					4 for 'LabTest' values of 'HCT'
+
+		4)	Assign values to the new variables
+				Accomplish this by using the ARRAY with the Index values
+				This will assign values to the new variables in a diagonal fashion
+				This removes the need for many IF/THEN/ELSE statements!   *;
+DATA	WORK.LabsPt1_Wide;
+	KEEP	Pt LabDate WBC -- HCT;
+	SET	WORK.LabsPt1_Long;
+	BY	Pt LabDate;
+
+	ARRAY	LabVbls {4}	WBC RBC HGB HCT (. . . .);
+
+	Index	=	1*(LabTest = 'WBC')	+	/* Part 3 of the strategy */
+				2*(LabTest = 'RBC')	+
+				3*(LabTest = 'HGB')	+
+				4*(LabTest = 'HCT')	;
+
+	IF	FIRST.LabDate = 1	THEN	CALL MISSING(OF LabVbls{*});
+
+	LabVbls{Index}	= LabValue; * Part 4 of the strategy *;
+
+	IF	LAST.LabDate = 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.LabsPt1_Wide;
+	RUN;
+
+
+*	Illustration 9 - Additional Long-to-Wide Example   *; RUN;
+
+*	Suppose we have montly high temperature (F) data for various cities   *;
+DATA WORK.Long;
+	INFILE DATALINES;
+	INPUT City $ Mon $ TempF;
+	DATALINES;
+Denver SEP 85
+Denver MAR 46
+Denver JAN 54
+Denver MAY 69
+Denver JUN 75
+Denver AUG 72
+Honolulu NOV 82
+Honolulu MAR 75
+Honolulu FEB 82
+;
+
+PROC PRINT DATA = WORK.Long;
+	RUN;
+
+*	Goal:  Create a 'Wide' data set with a variable for each month   *;
+DATA WORK.Wide;
+	DROP Mon TempF Index;
+	SET WORK.Long;
+	BY	City;
+
+	ARRAY Month{*} January February March April May June July August
+						September October November December (. . . . . . . . . . . .);
+
+	Index = 1*(Mon = 'JAN') + 
+			2*(Mon = 'FEB') + 
+			3*(Mon = 'MAR') + 
+			4*(Mon = 'APR') + 
+			5*(Mon = 'MAY') + 
+			6*(Mon = 'JUN') + 
+			7*(Mon = 'JUL') + 
+			8*(Mon = 'AUG') + 
+			9*(Mon = 'SEP') + 
+			10*(Mon = 'OCT') + 
+			11*(Mon = 'NOV') + 
+			12*(Mon = 'DEC') ;
+
+	IF FIRST.City = 1 THEN CALL MISSING (OF Month{*});
+
+	Month{Index} = TempF;
+
+	/*	Note:  An alternate (but longer) method would be:*/
+	/*	IF			Mon = 'JAN' THEN January = TempF;*/
+	/*		ELSE IF Mon = 'FEB' THEN February = TempF;*/
+	/*		...										  */
+	/*		ELSE IF Mon = 'DEC' THEN December = TempF;*/
+
+	IF LAST.City = 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Wide;
+	RUN;
+
+*	Extension:  Let's show how we could perform a Wide-to-Long transformation   *;
+DATA WORK.BackToLong;
+	KEEP City Mon TempF;
+	SET WORK.Wide;
+	BY City;
+
+	ARRAY Months {*} January -- December;
+	ARRAY Names {12} $ 3 _TEMPORARY_ ('JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+								 	  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC');
+	DO i = 1 TO DIM(Months);
+		Mon = Names{i};
+		TempF = Months{i};
+		IF MISSING(TempF) = 0 THEN OUTPUT;
+	END;
+	RUN;
+
+PROC PRINT DATA = WORK.BackToLong;
+	RUN;
+
+
+*	Illustration 10 - Long-to-Wide When a Numeric Identifier Exists   *;
+
+*	Above, we created a variable 'Index' to correctly place each temperature value
+		in the appropriate month
+	When a numeric variable already exists, we don't have to create an index variable!
+	We might simply need to specify the subscripts differently in an array!
+
+	The data below represent a day's high temperature recorded during the year
+		'Year' is our numeric identifier (which we'll use to index the variables)   *;
+DATA WORK.LongTemps;
+	INFILE DATALINES;
+	INPUT City $ Year TempF;
+	DATALINES;
+Denver 2009 85
+Denver 2003 46
+Denver 2001 54
+Denver 2005 69
+Denver 2006 75
+Denver 2008 72
+Honolulu 2011 82
+Honolulu 2003 75
+Honolulu 2002 82
+;
+
+*	Because I have a numeric variable 'Year', I will simply specify the subscripts
+		in my 'Years' array logically (from 2000-2012) to be able to use the
+		'Year' variable as my index variable (i.e. to place the value in the correct year)   *;
+DATA WORK.WideTemps;
+	KEEP	City Yr:;
+	SET	WORK.LongTemps;
+	BY	City;
+
+	ARRAY	Years {2000:2012}	Yr2000 - Yr2012 (.............);
+
+	IF	FIRST.City = 1	THEN CALL MISSING(OF Years{*});
+
+	Years{Year} = TempF;
+
+	IF	LAST.City = 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.WideTemps;
+	RUN;
+
+*	Note:  Alternatively, I could have
+		1) Created a new index variable such as:
+				YrIndex = Year - 1999
+			Then use this variable 'YrIndex' in the assignment statement as:
+				Years{YrIndex} = TempF
+	
+	The take-home message is that if you have a numeric identifying variable, that can often
+		be used as the index variable!   *;
+
+
+
+
+*	SECTION 4.5.4 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - Using the DATA Step with Nested Variable Values   *; RUN;
+
+*	Scenario:  Nested variables ('Test' is nested within 'TimePt')
+	Now, within each subject, the 'Value' is identified by a combination of 2 variables (TimePt and Test)
+
+	Goal:  Restructure the data set into a "wide" structure with 1 row per subject
+	Note:  The desired "wide" structure is to have a variable for each TimePt*Test combination
+
+	Creating data for the illustration   *;
+DATA	WORK.NestedLong;
+	INFILE	DATALINES;
+	INPUT	SubjID
+			TimePt	$
+			Test	$	
+			Value	;
+	DATALINES;
+1 Baseline SBP 139
+1 Baseline DBP 92
+1 Baseline HR  74
+1 FollowUp SBP 132
+1 FollowUp DBP 85
+1 FollowUp HR  70
+2 Baseline SBP 148
+2 Baseline DBP 101
+2 Baseline HR  79
+2 FollowUp SBP 138
+2 FollowUp DBP 90
+2 FollowUp HR  72
+3 Baseline SBP 126
+3 Baseline DBP 83
+3 Baseline HR  66
+3 FollowUp SBP 123
+3 FollowUp DBP 79
+3 FollowUp HR  62
+;
+
+PROC PRINT DATA = WORK.NestedLong;
+	RUN;
+
+DATA	WORK.NestedWide;
+	* The RETAIN stmt is only to order the variables to help show the intermediate steps *;
+	RETAIN	SubjID TimePt Test Index;
+	SET	WORK.NestedLong;
+	BY	SubjID;
+
+	Index	=	3*(TimePt	= 'FollowUp')	+ 
+				1*(Test		= 'SBP')		+
+				2*(Test		= 'DBP')		+
+				3*(Test		= 'HR')			;
+
+	ARRAY	TimePtTests {*}	BL_SBP	BL_DBP	BL_HR
+							FU_SBP	FU_DBP	FU_HR
+							(. . . . . .);
+
+	IF	FIRST.SubjID = 1	THEN	CALL MISSING(OF TimePtTests{*});
+
+	TimePtTests{Index}	= Value;
+
+	IF	LAST.SubjID	= 1;
+
+	DROP	TimePt Test Value Index;
+
+	RUN;
+
+PROC PRINT DATA = WORK.NestedWide;
+	RUN;
+
+
+*	Illustration 2 - Going from Wide Back to Long   *; RUN;
+
+DATA	WORK.NestedLong2;
+	SET	WORK.NestedWide;
+	KEEP	SubjID TimePt Test Value;
+
+	ARRAY TimePts {2} $ 8 _TEMPORARY_	('Baseline', 'FollowUp');
+	ARRAY Tests {3} $ 3 _TEMPORARY_	('SBP', 'DBP', 'HR');
+	ARRAY TimePtTests {*} BL_SBP -- FU_HR;
+				
+	DO i = 1 TO DIM(TimePts);
+		DO j = 1 TO DIM(Tests);
+			TimePt = TimePts{i};
+			Test = Tests{j};
+			Value = TimePtTests{3*(i-1)+j};
+			OUTPUT;
+		END;
+	END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.NestedLong2;
+	RUN;
+
+
+*	Illustration 3 - Using the LET option   *; RUN;
+
+*	The LET option allows for duplicate values of an ID variable
+	PROC TRANSPOSE transposes the observation that contains the last occurrence of
+		a particular ID value
+
+	Notice that values of LabTest are not unique   *;
+PROC PRINT DATA = WORK.LabsPt1_Long;
+	RUN;
+
+PROC TRANSPOSE
+		DATA	= WORK.LabsPt1_Long
+		OUT		= WORK.LabsPt1_LastDt	(	DROP	= _NAME_	)
+		LET;
+	VAR	LabValue;
+	BY	Pt;
+	ID	LabTest;
+	RUN;
+
+*	Notice that only the last date was transposed
+		(because that date contained the last of each of the LabTest values)   *;
+PROC PRINT DATA = WORK.LabsPt1_LastDt;
+	RUN;
+
+
+
+
+*	SECTION 4.5.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.5.1   |
+* ----------------------------- *
+	Task:  From the 'SASHelp.Class' data set, create the following 2 data
+			sets, each with the specified variables.
+			The 'Females' data set should only contain females (Sex='F') and
+			the 'Males' data set should only contain males (Sex='M')!
+
+			Data Sets:	WORK.Females		WORK.Males
+						------------		----------
+			Variables:	Name				Name
+						Height				Age			*;
+DATA	WORK.Females	(KEEP = Name Height)
+		WORK.Males		(KEEP = Name Age);
+	SET	SASHelp.Class;
+	IF			Sex = 'F' THEN OUTPUT WORK.Females;
+		ELSE IF Sex = 'M' THEN OUTPUT WORK.Males;
+	RUN;
+
+TITLE1 "Female Data";
+PROC PRINT DATA =WORK.Females;
+	RUN;
+
+TITLE1 "Male Data";
+PROC PRINT DATA = WORK.Males;
+	RUN;
+TITLE;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.5.2   |
+* ----------------------------- *
+	Below is a data set of years different teams have won the Super Bowl
+		(in "wide" format);
+DATA WORK.SuperBowlWins;
+	INFILE DATALINES DELIMITER=',' MISSOVER;
+	INPUT	Team $ Year1 Year2 Year3 Year4 Year5 Year6;
+	DATALINES;
+Cowboys,1972,1978,1993,1994,1996
+Patriots,2002,2004,2005,2015,2017
+Steelers,1975,1976,1979,1980,2006,2009
+;
+
+PROC PRINT DATA = WORK.SuperBowlWins;
+	RUN;
+
+*	Task:  Re-structure the data set to be in "long" format, which will look like:
+	Team		Year
+	--------	----
+	Cowboys		1972
+	Cowboys		1978
+	...			...
+	Steelers	2009   *;
+
+/* Option 1:  Use PROC TRANSPOSE */
+PROC TRANSPOSE
+		DATA = WORK.SuperBowlWins
+		OUT	 = WORK.SBWinsLong	(	DROP	= _NAME_
+									RENAME	= (	COL1	= Year	)
+									WHERE	= (	MISSING(Year) = 0	)
+								);
+	BY	Team;
+	VAR	Year1 - Year6;
+	RUN;
+
+/* Option 2:  Use the DATA step */
+DATA WORK.SBWinsLong;
+	SET WORK.SuperBowlWins;
+	BY Team;
+	ARRAY	Years{*} Year1 - Year6;
+	DO i = 1 TO DIM(Years);
+		Year = Years{i};
+		IF MISSING(Year) = 0 THEN OUTPUT;
+	END;
+	DROP i Year1 - Year6;
+	RUN;
+
+PROC PRINT DATA = WORK.SBWinsLong;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
