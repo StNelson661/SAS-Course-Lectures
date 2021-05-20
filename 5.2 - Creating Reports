@@ -1,0 +1,1055 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	5.2 - Creating Reports.sas                                              *
+*	PURPOSE:	Illustrate material in Chapter 5.2                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-11-11																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-09  SMN Added TOC & Comprehension Checks                        *
+*               2019-11-06  SMN A few additions and minor edits                         *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 5.2.1 - Using Titles and Footnotes                                      *
+*   	Section 5.2.2 - Using the PRINT Procedure                                       *
+*   	Section 5.2.3 - Using the REPORT Procedure                                      *
+*   	Section 5.2.4 - Using the Output Delivery System (ODS) to Create a Report       *
+*   	Section 5.2.5 - Additional Material                                             *
+*   	Section 5.2.6 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanTabs	"&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME CanAnl	"&CourseRoot/Cancer RCT/Data/4_Analysis";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 5.2.1 - USING TITLES AND FOOTNOTES   *; RUN;
+
+*	The default title for SAS is 'The SAS System'.  Footnotes are not displayed by default.
+	TITLE and FOOTNOTE statements are used to display titles and footnotes
+
+	SAS can display up to 10 titles and footnotes
+	TITLE is the same as TITLE1
+	TITLE1 is displayed as the top title
+	TITLE2 is displayed directly beneath the TITLE1 title, etc
+	The information above for titles is the same for footnotes as well   *;
+		
+
+*	Illustration 1 - Using TITLE and FOOTNOTE Statements   *; RUN;
+
+TITLE1	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer";
+TITLE2	"Gemcitabine + MUJ018 vs Gemcitabine + Placebo";
+TITLE3	"Listing 3:  Adverse Events";
+FOOTNOTE1	"Trial funded by the MUJ company";
+FOOTNOTE2	"Data Cut Date:  November 3rd, 2016"; 
+PROC PRINT DATA = CanTabs.AELOG;
+	RUN;
+
+
+*	Illustration 2 - TITLE and FOOTNOTE Statements Are Global Statements   *; RUN;
+
+*	Recall:  Global statements
+		- May be placed anywhere in the program
+		- Remain in effect until they are changed or the SAS session ends   *;
+PROC PRINT DATA = SASHelp.Class;
+	RUN;
+*	Note:  This output is completely un-related to the above output, but
+			the TITLEs and FOOTNOTEs are still in effect!   *;
+
+
+*	Illustration 3 - Clearing TITLE and FOOTNOTE Statements   *; RUN;
+
+*	TITLE statements may be cleared by submitting a null TITLE statement
+		(ditto for FOOTNOTE statements)
+	Null TITLE and FOOTNOTE statements are simply ...   *;
+TITLE;
+FOOTNOTE;
+PROC PRINT DATA = SASHelp.Class;
+	RUN;
+*	NB:  It is good practice to submit null statements after producing output   *;
+
+
+*	Illustration 4 - Replacing TITLE and FOOTNOTE Statements   *; RUN;
+
+*	Submitting a TITLEn statement will:
+		1)	Change TITLEn to the current specification, and
+		2)	Cancel all TITLEy statements where y > n
+		(ditto for FOOTNOTE statements)   *;
+TITLE1	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer";
+TITLE2	"Gemcitabine + MUJ018 vs Gemcitabine + Placebo";
+TITLE3	"Listing 3:  Adverse Events";
+FOOTNOTE1	"Trial funded by MUJ company";
+FOOTNOTE2	"Data Cut Date:  November 3rd, 2016"; 
+PROC PRINT DATA = CanTabs.AEs;
+	RUN;
+
+TITLE3	"Listing 2:  Outcome Data";
+FOOTNOTE1	"Note:  Preliminary data";
+PROC PRINT DATA = CanTabs.Outcome;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.2.1   |
+* ----------------------------- *
+	Goal:  Display the 'CanTabs.Demog' data with the following titles and footnotes:
+
+	Titles:
+	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer" [this is the existing TITLE1]
+	"Listing 4:  Demographic Data"
+
+	[The report would appear here]
+
+	Footnote:
+	"Trial Sites:  NJCC and OICR"
+
+	Task:  Create the TITLE and FOOTNOTE statements which will accomplish the goal   *;
+TITLE1 "Phase 2 Randomized Controlled Trial in Pancreatic Cancer";
+TITLE2 "Listing 4: Demographic Data";
+FOOTNOTE "Trial Sites: NJCC and OICR";
+PROC PRINT DATA = CanTabs.Demographics;
+	RUN;
+
+
+*	Illustration 5 - TITLE and FOOTNOTE Spacing   *; RUN;
+
+*	If numbers are skipped, blank lines will be inserted in the report   *;
+TITLE1	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer";
+TITLE3	"Gemcitabine + MUJ018 vs Gemcitabine + Placebo";
+TITLE4	"Listing 3:  Adverse Events";
+FOOTNOTE1	"Trial funded by MUJ company";
+FOOTNOTE3	"Data Cut Date:  November 3rd, 2016"; 
+PROC PRINT DATA = CanTabs.AEs;
+	RUN;
+TITLE;
+FOOTNOTE;
+
+
+*	Illustration 6 - Using the #BYVAL Option   *; RUN;
+
+*	The #BYVAL option may be used to customize titles to values of the BY variable
+		Recall:  Data must be ordered by the BY variable   *;
+PROC SORT
+		DATA	= CanAnl.CanAnalysis1
+		OUT		= WORK.CanAnalysis1_Sorted;
+	BY	TxNm;
+	RUN;
+
+TITLE1	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer";
+TITLE2	"Results for Subjects On #BYVAL(TxNm)";
+PROC PRINT	DATA = WORK.CanAnalysis1_Sorted;
+	BY	TxNm;
+	PAGEBY	TxNm;
+	VAR SubjID SexCd AgeAtEnroll LesionRatio;
+	RUN;
+TITLE;
+
+
+
+
+*	SECTION 5.2.2 - USING THE PRINT PROCEDURE   *; RUN;
+
+*	Recall from Chapter 1.2 that PROC PRINT is used to display the data values
+	By default, all values from all variables will be displayed   *;
+
+
+*	Illustration 1 - PROC PRINT Options   *; RUN;
+
+*	The LABEL option is needed to display variable labels
+	The NOOBS option removes the 'Obs' column
+	The VAR statement specifies the variables to print, and the order in which
+		to print them (Chapter 1.2)   *;
+PROC PRINT
+		DATA	= CanAnl.CanAnalysis1
+		LABEL
+		NOOBS;
+	VAR	SubjID SexCd AgeAtEnroll LesionRatio;
+	RUN;
+
+
+*	Illustration 2 - Changing the Heading for the Observation Column   *; RUN;
+
+*	The OBS= option is used to specify a column heading for the default
+		first column containing the observation number   *;
+PROC PRINT
+		DATA	= CanAnl.CanAnalysis1
+		OBS		= 'Subject Number';
+	VAR	SubjID SexCd AgeAtEnroll LesionRatio;
+	RUN;
+
+
+*	Illustration 3 - Using the ID Statement   *; RUN;
+
+*	The ID statement identifies the observations by the variable(s) listed
+		instead of by using observation numbers
+	Note:  The observation number is no longer in effect
+	If no VAR statement is included, all other variables will be displayed as well   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	ID	SubjID;
+	VAR	SexCd AgeAtEnroll LesionRatio;
+	RUN;
+
+*	Note:  Multiple variables may be in the ID statement   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	ID	SubjID TxNm;
+	VAR	SexCd AgeAtEnroll LesionRatio;
+	RUN;
+
+
+*	Illustration 4 - Summing a Numeric Variable   *; RUN;
+
+*	The SUM statement will display totals of numeric variables specified   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	ID	SubjID;
+	VAR	TxNm;
+	SUM	LesionSumCmMon6 AECnt;
+	RUN;
+
+
+*	Illustration 5 - Creating Output for Each Level of a BY Variable   *; RUN;
+
+*	The BY statement will produce a separate section of the report for each
+		BY group
+	When the SUM statement is used in combination with the BY statement, sums
+		are produced for each BY-group as well as the overall sum
+
+	Note:  First use PROC SORT to order the data by the desired BY variable   *;
+PROC SORT
+		DATA	= CanAnl.CanAnalysis1
+		OUT		= WORK.CanAnalysis1;
+	BY	TxNm DESCENDING LesionSumCmMon6;
+	RUN;
+
+PROC PRINT	DATA = WORK.CanAnalysis1;
+	BY	TxNm;
+	ID	SubjID;
+	VAR	EthRaceCd;
+	SUM	LesionSumCmMon6 AECnt;
+	RUN;
+
+*	Placing the BY variable in an ID statement may improve the look by
+		removing the BY-line (header) and inserting a grouping variable   *;
+PROC PRINT	DATA = WORK.CanAnalysis1;
+	BY	TxNm;
+	ID	TxNm SubjID;
+	VAR	EthRaceCd;
+	SUM	LesionSumCmMon6 AECnt;
+	RUN;
+
+*	The PAGEBY option may be used to create a report for each level on its own page
+	The PAGEBY statement is needed for the #BYVAL option to display a different
+		title on each page of a report   *;
+PROC PRINT	DATA = WORK.CanAnalysis1;
+	BY	TxNm;
+	PAGEBY	TxNm;
+	ID	TxNm SubjID;
+	VAR	EthRaceCd;
+	SUM	LesionSumCmMon6 AECnt;
+	RUN;
+
+
+*	Illustration 6 - Controlling the Break for Variable Labels   *; RUN;
+
+*	Recall the LABEL option must be specified to display the variable's label   *;
+PROC PRINT	
+		DATA = WORK.CanAnalysis1
+		LABEL;
+	VAR	SubjID EthRaceCd LesionRatio ScanIntvlWks;
+	RUN;
+
+*	The SPLIT= option will also display labels (LABEL isn't needed when SPLIT= is used)
+	The SPLIT= option specifies a character which splits labels into multiple lines
+	Often temporary labels are used with SPLIT= to control desired column headings   *;
+PROC PRINT	
+		DATA = WORK.CanAnalysis1
+		SPLIT = '*';
+	VAR	SubjID EthRaceCd LesionRatio ScanIntvlWks;
+	LABEL	SubjID		= 'Subject*ID'
+			EthRaceCd	= 'Ethnicity/*Race Code'
+			LesionRatio	= 'Lesion Ratio*(Month 6/*Baseline)'
+			ScanIntvlWks= 'Scan*Interval*(Weeks)';
+	RUN;
+
+*	Realize that using a split character which is already in the labels may give
+		undesired results   *;
+PROC PRINT	
+		DATA = WORK.CanAnalysis1
+		SPLIT = '/';
+	VAR	SubjID EthRaceCd LesionRatio ScanIntvlWks;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.2.2   |
+* ----------------------------- *
+	Goal:  Display the 'CanTabs.Contact' data with the following column headers:
+
+	Full						Mobile
+	Name			City		Phone Number
+	-------------	----------	--------------
+	James W. King	Absecon		(609) 986-5888
+	...				...			...				*;
+PROC PRINT DATA = CanTabs.Contact NOOBS Split = '*';
+	ID	FullNm;
+	VAR	City MobilePh;
+	LABEL	FullNm		= 'Full * Name'
+			City		= '*City'
+			MobilePh	= 'Mobile * Phone Number';
+	RUN;
+
+
+
+
+*	SECTION 5.2.3 - USING THE REPORT PROCEDURE   *; RUN;
+
+
+*	Illustration 1 - PROC REPORT Basics   *; RUN;
+
+*	In older versions of SAS the default mode was the windowing environment, so
+		the NOWINDOWS (alias NOWD) used to need to be specified to keep the
+		interactive Report from opening
+		(you may want to specify this if you're working with an older version)
+
+	By default, SAS will include all the variables in the data set in a listing report
+		(similar to PROC PRINT)   *;
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		NOWINDOWS;
+	RUN;
+
+
+*	Illustration 2 - Using the COLUMN Statement   *; RUN;
+
+*	The COLUMN statement specifies:
+		1) the variable(s) to display, and
+		2) their order
+	This produces a detail report with 1 row per observation   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	SubjID TxNm SexCd LesionRatio AECnt;
+	RUN;
+
+*	Note:  If ONLY numeric variables are specified, by default only the sums are displayed    *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	EthCd RaceCd MaxGrade SiteID LesionRatio;
+	RUN;
+*	NB:  This can wreak havoc with numeric variables such as Subject IDs, Dates, etc.!
+	This default behavior may be controlled by specifying the variable's
+		usage type (explained soon) as DISPLAY   *;
+
+
+*	Illustration 3 - The DEFINE Statement   *; RUN;
+
+*	The DEFINE statement is where options for individual variables are specified
+	The syntax is:  DEFINE variable-name / <options> 'column-header'   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	SubjID TxNm SexCd LesionRatio AECnt;
+	DEFINE	AECnt	/ 'AE Count';
+	RUN;
+
+
+*	Illustration 4 - Specifying Variable Usage Types   *; RUN;
+
+*	Usage types include:
+	DISPLAY	- Creates one row for each observation in the data set (default for character variables)
+	ORDER	- Creates one row for each observation with rows ordered by the value of the order variable(s)
+	GROUP	- Creates one row for each unique value of the variable
+	ANALYSIS- Calculates statistics for the variable
+				(default for numeric variables, with a default statistic of SUM)
+
+	Goal:  Create the report which displays subjects nested by SexCd within TxNm,
+			with subject in each group displayed in order of LesionRatio   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	* The order in the COLUMN statement determines the nesting of GROUP variables *;
+	COLUMN	TxNm SexCd SubjID LesionRatio AECnt;
+	DEFINE	TxNm	/ GROUP;
+	DEFINE	SexCd	/ GROUP;
+	DEFINE	LesionRatio	/ ORDER;
+	DEFINE	AECnt	/ 'AE Count';
+	RUN;
+
+*	Goal:  Create the report which displays subjects grouped by TxNm within
+			descending AECnt order
+			To accomplish this, 'AECnt' must appear before 'TxNm' in the COLUMN statement
+				(The order of DEFINE statements doesn't affect the output)
+
+	Note:  The ORDER usage prevents repetition of values over multiple rows (like GROUP does)
+			Also, multiple variables may be specified as ORDER variables   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	AECnt TxNm SubjID SexCd LesionRatio;
+	DEFINE	AECnt	/ ORDER DESCENDING 'AE Count';
+	DEFINE	TxNm	/ ORDER;
+	RUN;
+
+*	Illustrates the GROUP usage type
+	Goal:  Create a report showing a list of unique sex/race combinations   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	SexCd RaceCd;
+
+	DEFINE	SexCd	/ GROUP;
+	DEFINE	RaceCd	/ GROUP;
+
+	RUN;
+*	Note that by default observations containing missing values are not included   *;
+
+*	Including the 'MISSING' option in the PROC REPORT statement will now display missing as a level   *;
+PROC REPORT
+		DATA = CanAnl.CanAnalysis1
+		MISSING;
+	COLUMN	SexCd RaceCd;
+
+	DEFINE	SexCd	/ GROUP;
+	DEFINE	RaceCd	/ GROUP;
+
+	RUN;
+
+*	Compare this with what would be produced using the ORDER usage type   *;
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		MISSING;
+	COLUMN	SexCd RaceCd;
+
+	DEFINE	SexCd	/ ORDER;
+	DEFINE	RaceCd	/ ORDER;
+
+	RUN;
+
+*	Using the GROUP usage to "roll up" a continuous variable (AECnt) by treatment group
+	Recall:  Numeric variables have a default usage of ANALYSIS with a SUM statistic)   *;
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		MISSING;
+	COLUMN	TxNm AECnt;
+
+	DEFINE	TxNm	/ GROUP;
+	DEFINE	AECnt	/ 'Adverse Event Count';
+
+	RUN;
+
+
+*	Illustration 5 - Using the NOPRINT Option   *; RUN;
+
+*	Goal:  Display full name but order the display by last name
+	Note:  'LastNm' must still be in the COLUMN statement!   *;
+PROC REPORT DATA = CanTabs.Contact;
+	COLUMN	FullNm LastNm StateCd;
+	DEFINE	LastNm	/ ORDER NOPRINT; * I don't want the 'LastNm' variable in the report *;
+	RUN;
+
+*	Extension 1:  Suppose I don't want lower-case sorted after upper-case in the display   *;
+DATA	WORK.Contact;
+	SET	CanTabs.Contact;
+	LastNmUpper	= UPCASE(LastNm);
+	RUN;
+
+PROC REPORT DATA = WORK.Contact;
+	COLUMN	FullNm LastNmUpper StateCd;
+	DEFINE	LastNmUpper	/ ORDER NOPRINT;
+	RUN;
+
+*	Extension 2:  Suppose I want to display subjects from Oregon first in the report
+	I often use the NOPRINT option when I create a variable to order the rows, but don't
+		want that variable displayed   *;
+DATA	WORK.Contact;
+	SET	CanTabs.Contact;
+	LastNmUpper	= UPCASE(LastNm);
+	JudOrder	= 2 - (StateCd = 'OR');
+	RUN;
+
+*	Let's see the 'JudOrder' variable just created   *;
+PROC PRINT DATA = WORK.Contact;
+	VAR StateCd JudOrder;
+	RUN;
+
+PROC REPORT DATA = WORK.Contact;
+	COLUMN	JudOrder FullNm LastNmUpper StateCd;
+	DEFINE	JudOrder	/ ORDER NOPRINT;
+	DEFINE	LastNmUpper	/ ORDER NOPRINT;
+	RUN;
+
+
+*	Illustration 6 - Using the DISPLAY Usage for Numeric Variables   *; RUN;
+
+*	Recall Illustration 2 when only numeric variables were included in the report
+	If any numeric variable is given the DISPLAY usage type, that instructs SAS to
+		display one row per observation   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1;
+	COLUMN	RaceCd MaxGrade SiteID LesionRatio; * This are all numeric variables *;
+	DEFINE	RaceCd	/ DISPLAY;
+	RUN;
+
+
+*	Illustration 7 - Using the ANALYSIS Usage to Calculate Statistics   *; RUN;
+
+*	The ANALYSIS usage enables the specification of statistics to be computed, including:
+		Statistics: N NMISS SUM MEAN MODE STDDEV STDERR RANGE
+		Quantiles:	MIN P1 P5 P10 Q1 MEDIAN Q3 P90 P95 P99 MAX   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm AgeAtEnroll AECnt;
+
+	DEFINE	TxNm	/ GROUP; * Causes the statistics to be grouped by TxNm *;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Average/Age';
+	DEFINE	AECnt		/ 'Total/Adverse/Events';
+
+	RUN;
+
+
+*	Illustration 8 - Using the RBREAK Statement to Incorporate Totals Into a Report   *; RUN;
+
+*	The RBREAK statement produces a default summary at the beginning or end of a report
+		(or of a BY grop if a BY statement is included)
+	The RBREAK locations specification must be either BEFORE or AFTER
+
+	Goal:  Display summaries at the bottom of the report
+			The default is to use the SUM statistic on numeric variables
+			(which is why I need a DEFINE statement to calculate the mean age
+				but I don't need a DEFINE statement to calculate the sum of AECnt)   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm AgeAtEnroll AECnt;
+
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age';
+
+	RBREAK	AFTER	/ SUMMARIZE;
+
+	RUN;
+
+*	Goal:  Display summaries at the top, then show breakdown by Sex within Treatment   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd AgeAtEnroll AECnt;
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Average/Age';
+	DEFINE	AECnt		/ 'Total/Adverse/Events';
+
+	RBREAK	BEFORE	/ SUMMARIZE;
+
+	RUN;
+
+
+*	Illustration 9 - Using the BREAK Statement   *; RUN;
+
+*	The BREAK statement prouces a default summary at a break
+		(a change in the value of a GROUP or ORDER variable)
+	BREAK may only be used with a variable whose usage is ORDER or GROUP
+
+	Goal:  Create a report displaying Age and AECnt
+			by Treatment and Sex, with sub-totals by Treatment   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd AgeAtEnroll AECnt;
+
+	DEFINE	TxNm		/ ORDER;
+	DEFINE	SexCd		/ ORDER;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age at/Enrollment';
+	DEFINE	AECnt		/ 'AE/Count';
+
+	BREAK	AFTER TxNm	/ SUMMARIZE;
+
+	RUN;
+
+*	Both RBREAK and BREAK statements may be used to give sub-totals and the grand total   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd AgeAtEnroll AECnt;
+
+	DEFINE	TxNm		/ ORDER;
+	DEFINE	SexCd		/ ORDER;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age at/Enrollment';
+	DEFINE	AECnt		/ 'AE/Count';
+
+	BREAK	AFTER TxNm	/ SUMMARIZE;
+	RBREAK	AFTER		/ SUMMARIZE;
+
+	RUN;
+
+
+*	Illustration 10 - Using the BREAK Statement PAGE Specification   *; RUN;
+
+*	The PAGE specification will incorporate page breaks into a report   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd AgeAtEnroll AECnt;
+
+	DEFINE	TxNm		/ ORDER;
+	DEFINE	SexCd		/ ORDER;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age at/Enrollment';
+	DEFINE	AECnt		/ 'AE/Count';
+
+	BREAK	AFTER TxNm	/ SUMMARIZE PAGE;
+
+	RUN;
+
+
+*	Illustration 11 - Incorporating Statistics into a Report   *; RUN;
+
+*	To request the number of observations (N), simply insert N in the COLUMN statement   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N AgeAtEnroll AECnt;
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	N			/ '#/Enrolled';
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Mean Age/at Enrollment';
+	DEFINE	AECnt		/ 'Total/Adverse/Events';
+
+	RUN;
+
+*	To generate a statistic for a specific variable, specify the statistic in
+		the COLUMN statement next to the variable, separated by a comma
+	The specification before the comma appears on top, and after the comma on the bottom   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N AgeAtEnroll AECnt,MEAN;
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age at/Enrollment';
+	DEFINE	AECnt		/ FORMAT = 3.1 'Adverse/Events';
+
+	RUN;
+
+*	Multiple statistics may be specified by placing them within parentheses   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N AgeAtEnroll AECnt,(MEAN MIN MEDIAN MAX);
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 4.1 'Age at/Enrollment';
+	DEFINE	AECnt		/ FORMAT = 3.1 'Adverse Events';
+
+	RUN;
+
+*	For a single statistic, multiple variables may be specified by placing them within parentheses   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N MIN,(AgeAtEnroll AECnt) MAX,(AgeAtEnroll AECnt);
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 3. 'Age';
+	DEFINE	AECnt		/ FORMAT = 2. 'Adverse/Events';
+
+	RUN;
+
+*	Note:  The multiple specifications may be crossed using 2 sets of parentheses   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N (AgeAtEnroll AECnt),(MIN MAX);
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 3. 'Age';
+	DEFINE	AECnt		/ FORMAT = 2. 'Adverse/Events';
+
+	RUN;
+
+*	A spanning header is created when there are multiple items nested under a single specification
+	For example, "MAX" spans over "Age" and "AE Count"   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	TxNm SexCd N (AgeAtEnroll AECnt),MIN   MAX,(AgeAtEnroll AECnt);
+
+	DEFINE	TxNm		/ GROUP;
+	DEFINE	SexCd		/ GROUP;
+	DEFINE	AgeAtEnroll	/ ANALYSIS MEAN FORMAT = 3. 'Age';
+	DEFINE	AECnt		/ FORMAT = 2. 'Adverse/Events';
+
+	RUN;
+
+
+*	Illustration 12 - Creating Spanning Headers   *; RUN;
+
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	SubjID
+			("Outcome"			ScanIntvlWks LesionRatio)
+			("Demographics"		SexCd RaceCd AgeAtEnroll)
+			("Adverse Events"	MaxGrade AECnt);
+	RUN;
+
+*	Note:  Headers may be nested   *;
+PROC REPORT DATA = CanAnl.CanAnalysis1 SPLIT = '/';
+	COLUMN	SubjID
+			("Analysis Variables"
+				("Outcome"			ScanIntvlWks LesionRatio)
+				("Demographics"		SexCd RaceCd AgeAtEnroll)	)
+			("Adverse Events"	MaxGrade AECnt);
+	RUN;
+
+
+*	Illustration 13 - Incorporating Computed Variables Into Reports   *; RUN;
+
+*	New variables may be created within a "Compute Block"
+		A Compute Block starts with a COMPUTE statement and ends with an ENDCOMP statement
+		The usage type is COMPUTED for a computed variable
+
+	For numeric computed variables, their components must be variables with an ANALYSIS usage
+		The components must be appended with their statistic (recall the default is SUM)   *;
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		SPLIT	= '/';
+
+	COLUMN	SubjID LesionSumCmMon0 LesionSumCmMon6 Change;
+
+	DEFINE	LesionSumCmMon0	/ 'Month 0';
+	DEFINE	LesionSumCmMon6	/ 'Month 6';
+	DEFINE	Change			/ COMPUTED FORMAT = 4.1	'Difference / (Mon 6 - Mon 0)';
+
+	COMPUTE	Change;
+		Change	=  LesionSumCmMon6.SUM - LesionSumCmMon0.SUM;
+	ENDCOMP;
+
+	RUN;
+
+*	Illustrates computing a character variable   *;
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		SPLIT	= '/';
+
+	COLUMN	SubjID LesionSumCmMon0 LesionSumCmMon6 Change Comment;
+
+	DEFINE	LesionSumCmMon0	/ 'Month 0';
+	DEFINE	LesionSumCmMon6	/ 'Month 6';
+	DEFINE	Change			/ COMPUTED FORMAT = 4.1	'Difference / (Mon 6 - Mon 0)';
+	DEFINE	Comment			/ COMPUTED FORMAT = $18.;
+
+	COMPUTE	Change;
+		Change	=  LesionSumCmMon6.SUM - LesionSumCmMon0.SUM;
+	ENDCOMP;
+
+	COMPUTE	Comment 	/ CHARACTER LENGTH = 18;
+		IF			Change = .	THEN	Comment = 'Insufficient Data';
+			ELSE IF Change > 0	THEN	Comment = 'Lesion Worsened';
+			ELSE IF Change = 0	THEN	Comment = 'No Change';
+			ELSE IF Change < 0	THEN	Comment = 'Lesion Improved';
+	ENDCOMP;
+
+	RUN;
+
+*	SECTION 5.2.4 - USING THE OUTPUT DELIVERY SYSTEM (ODS) TO CREATE A REPORT   *; RUN;
+
+*	When output is generated, reports are created by default
+	The report format depends on the SAS interface
+	1)	Windowing environment
+			Default:  HTML
+			Available:  HTML and LISTING (text)
+			To change:  To Tools -> Options -> Preferences -> Results
+			
+	2)	SAS Studio
+			Default:  HTML, PDF, and RTF
+			Available:  HTML, PDF, and RTF
+			To change:  More application options -> Preferences -> Results
+
+	3)	Enterprise Guide
+			Default:  SASREPORT
+			Available:  SASREPORT, HTML, PDF, RTF, LISTING, POWERPOINT, EXCEL
+			To change:  Tools -> Options -> Results General
+
+	The above are interactive ways to control the report formats
+
+	ODS statements may be used to create a physical file that can be viewed
+		outside of SAS
+
+	The ODS statement will programmatically control:
+	1)	The format of the report created, including:
+
+			FORMAT		EXTENSION	FILE TYPE
+			---------	---------	--------------------------
+			HTML		.html		Hypertext Markup Language
+			PDF			.pdf		Portable Document Format
+			RTF			.rtf		Rich Text Format
+			LISTING		.txt		Text
+			SASREPORT	.xml		Extensible Markup Language
+			POWERPOINT	.ppt		Microsoft PowerPoint
+			EXCEL		.xlsx		Microsoft Excel
+
+	2)	The location of where the report is created
+	3)	The file-name of the report created
+
+	Use the ODS statement with appropriate options to specify the
+		1) format, 2) destination-path, and 3) name of the desired report   *;
+
+
+*	Illustration 1 - Controlling Reports Programmatically   *; RUN;
+
+*	Goal:  Create a
+			1)	PDF report
+			2)	Sent to the '4_Analysis' folder for the Cancer RCT study
+			3)	Named 'Cancer RCT Demographics'   *;
+ODS PDF FILE = "&CourseRoot/Cancer RCT/Data/4_Analysis/Cancer RCT Demographics.pdf";
+
+TITLE1	"Cancer Randomized Controlled Trial";
+TITLE2	"Subject Demographics";
+PROC PRINT DATA = CanAnl.CanAnalysis1 LABEL;
+	VAR	SubjID SexCd RaceCd AgeAtEnroll;
+	RUN;
+
+ODS PDF CLOSE;
+
+*	Goal:  Create a
+			1)	RTF report
+			2)	Sent to the '4_Analysis' folder for the Cancer RCT study
+			3)	Named 'Cancer RCT Outcomes'   *;
+ODS RTF FILE = "&CourseRoot/Cancer RCT/Data/4_Analysis/Cancer RCT Outcomes.rtf";
+
+TITLE1	"Cancer Randomized Controlled Trial";
+TITLE2	"Subject Outcomes";
+PROC REPORT
+		DATA	= CanAnl.CanAnalysis1
+		SPLIT	= '/';
+
+	COLUMN	SubjID LesionSumCmMon0 LesionSumCmMon6 Change Comment;
+
+	DEFINE	LesionSumCmMon0	/ 'Month 0';
+	DEFINE	LesionSumCmMon6	/ 'Month 6';
+	DEFINE	Change			/ COMPUTED FORMAT = 4.1	'Difference / (Mon 6 - Mon 0)';
+	DEFINE	Comment			/ COMPUTED FORMAT = $18.;
+
+	COMPUTE	Change;
+		Change	=  LesionSumCmMon6.SUM - LesionSumCmMon0.SUM;
+	ENDCOMP;
+
+	COMPUTE	Comment 	/ CHARACTER LENGTH = 18;
+		IF			Change = .	THEN	Comment = 'Insufficient Data';
+			ELSE IF Change > 0	THEN	Comment = 'Lesion Worsened';
+			ELSE IF Change = 0	THEN	Comment = 'No Change';
+			ELSE IF Change < 0	THEN	Comment = 'Lesion Improved';
+	ENDCOMP;
+
+	RUN;
+
+ODS RTF CLOSE;
+
+
+*	Illustration 2 - Accessing the Created File   *; RUN;
+
+*	The files may be accessed outside of SAS (i.e. in a folder on your computer)
+	Additionally, they may be accessed from within the SAS interface
+
+	Windowing Environment:  Results window
+	SAS Studio:  'Folders' window
+	Enterprise Guide:  Tabs (e.g. 'Results - PDF')   *;
+
+
+*	Illustration 3 - The STYLE= Option and the ODS PROCLABEL Statement   *; RUN;
+
+*	The STYLE= option allows for specification of a style to be applied to a report
+	(These have no effect when the LISTING destination is specified)
+
+	The ODS PROCLABEL statement enables you to change a procedure label
+		(which shows up in the pdf bookmarks)
+		I'm generating the 'generic' bookmark for the 1st procedure,
+			then customizing it for the 2nd procedure   *;
+ODS PDF FILE = "&CourseRoot/Cancer RCT/Data/4_Analysis/Cancer RCT Demographics.pdf"
+		STYLE = OCEAN;
+
+TITLE1	"Cancer Randomized Controlled Trial";
+TITLE2	"Subject Demographics";
+PROC PRINT DATA = CanAnl.CanAnalysis1 LABEL;
+	VAR	SubjID SexCd RaceCd AgeAtEnroll;
+	RUN;
+
+ODS PROCLABEL = 'Demographics Crosstabulations';
+TITLE2	"Crosstabulation of Demographics by Treatment Group";
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES (SexCd EthRaceCd) * TxNm / NOPERCENT NOROW NOCOL;
+	RUN;
+
+ODS PDF CLOSE;
+
+
+*	Illustration 4 - Viewing Available Styles   *; RUN;
+
+*	PROC TEMPLATE may be used to display a list of available styles   *;
+PROC TEMPLATE;
+	LIST	Styles;
+	RUN;
+
+
+*	Illustration 5 - The ODS PROCTITLE/NOPROCTITLE Statements   *; RUN;
+
+*	This statement specifies whether to write (or not) the title that
+		identifies the procedure that produces the results in the output
+	By default, the procedure title is included   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES TxNm * SexCd;
+	RUN;
+
+*	Use ODS NOPROCTITLE to turn it off   *;
+ODS NOPROCTITLE;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES TxNm * SexCd;
+	RUN;
+
+*	It will stay off until it is turned back on   *;
+ODS PROCTITLE;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES TxNm * SexCd;
+	RUN;
+
+
+*	Illustration 6 - The ODS SELECT/EXCLUDE Statements   *; RUN;
+
+*	The ODS SELECT statement specifies output objects to include for ODS destinations
+
+	Recall:  Use the ODS TRACE statements to display the output objects in the log window   *;
+ODS TRACE ON;
+PROC UNIVARIATE DATA = CanAnl.CanAnalysis1;
+	VAR AgeAtEnroll;
+	RUN;
+ODS TRACE OFF;
+
+*	Goal:  Produce a report including only the quantiles   *; RUN;
+ODS SELECT Quantiles;
+PROC UNIVARIATE DATA = CanAnl.CanAnalysis1;
+	VAR AgeAtEnroll;
+	RUN;
+
+*	Goal:  Produce a report including everything except the:
+			1) quantiles and 2) tests for location   *; RUN;
+ODS EXCLUDE Quantiles TestsForLocation;
+PROC UNIVARIATE DATA = CanAnl.CanAnalysis1;
+	VAR AgeAtEnroll;
+	RUN;
+
+
+
+
+*	SECTION 5.2.5 - ADDITIONAL MATERIAL   *; RUN;
+
+*	PROC TABULATE is another procedure which produces reports
+		Good introductory material is in The Little SAS Book (Sections 4.13 - 4.17)   *;
+
+
+*	Illustration 1 - The ODS EXCEL Destination   *; RUN;
+
+*	The ODS EXCEL destination provides an enormous amount of flexibility for creating
+		a Microsoft Excel .xlsx file
+	Multiple styles may be used in the same file by changing it using the STYLE= option
+	The OPTIONS option allows for the specification of several options, including:
+
+		Option				Specifies ...
+		--------------		------------------------------------------
+		SHEET_INTERVAL		Criteria for when a new worksheet is created
+			NONE				Creates 1 worksheet with all of the data
+			PROC				Creates 1 worksheet of all of the procedure output
+			PAGE				Creates a worksheet for each page of procedure output
+			BYGROUP				Creates a new worksheet after each BY-group
+			NOW					Creates a new worksheet (the next output object starts on a new sheet)
+			TABLE (Default)		Creates a worksheet for each table
+
+		SHEET_NAME			Name for the next worksheet
+
+		FROZEN_HEADERS		Headers can scroll or not scroll with the scroll bar
+			ON					Headers do not scroll with the scroll bar
+			OFF (Default)		Headers do scroll with the scroll bar
+			number				The number of the header row that does not scroll with the scroll bar
+
+		ORIENTATION			Orients the printed page as either portrait or landscape
+			PORTRAIT (Default)	Prints a portrait-oriented page
+			LANDSCAPE			Prints a landscape-oriented page
+
+		EMBEDDED_FOOTNOTES	Whether footnotes should appear in the worksheet
+			ON					Embeds footnotes in the worksheet
+			OFF (Default)		Does not embed footnotes in the worksheet
+
+		TAB_COLOR			Color for the next worksheet
+
+	These options are illustrated below
+	Note:  Using ODS EXCEL with PROC PRINT enables us to specify the order and format of
+			columns in the .xlsx file (this is not possible with PROC EXPORT)!   *;		
+
+ODS EXCEL 
+	FILE="&CourseRoot/Cancer RCT/Data/4_Analysis/My Report.xlsx"
+	STYLE=EXCEL
+	OPTIONS (	SHEET_INTERVAL='PROC'
+				SHEET_NAME='Demographics'
+				FROZEN_HEADERS='1'
+				ORIENTATION='LANDSCAPE'
+				EMBEDDED_FOOTNOTES='OFF'
+				TAB_COLOR='BLUE'
+			);
+PROC PRINT DATA = CanAnl.CanAnalysis1 NOOBS LABEL;
+	VAR	SubjID SexCd EthRaceCd AgeAtEnroll;
+	FORMAT	AgeAtEnroll 4.1;
+	RUN;
+
+ODS EXCEL OPTIONS (	SHEET_NAME='Adverse Events');
+PROC PRINT DATA = CanAnl.CanAnalysis1 NOOBS LABEL;
+	VAR	SubjID MaxGrade AECnt HadAEInd;
+	RUN;
+
+ODS EXCEL 
+	STYLE=OCEAN
+	OPTIONS (	SHEET_NAME='t-Test'
+				FROZEN_HEADERS='3'
+				TAB_COLOR='RED'	);
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+ODS EXCEL CLOSE;
+
+
+
+
+
+
+*	SECTION 5.2.6 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.2.1   |
+* ----------------------------- *
+	Goal:  Display the 'CanTabs.Demog' data with the following titles and footnotes:
+
+	Titles:
+	"Phase 2 Randomized Controlled Trial in Pancreatic Cancer"
+	"Listing 4:  Demographic Data"
+
+	[The report would appear here]
+
+	Footnote:
+	"Trial Sites:  NJCC and OICR"
+
+	Task:  Create the TITLE and FOOTNOTE statements which will accomplish the goal   *;
+TITLE2	"Listing 4:  Demographic Data";
+FOOTNOTE1	"Trial Sites:  NJCC and OICR";
+PROC PRINT DATA = CanTabs.Demog;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.2.2   |
+* ----------------------------- *
+	Goal:  Display the 'CanTabs.Contact' data with the following column headers:
+
+	Full						Mobile
+	Name			City		Phone Number
+	-------------	----------	--------------
+	James W. King	Absecon		(609) 986-5888
+	...				...			...				*;
+PROC PRINT DATA = CanTabs.Contact NOOBS SPLIT = '@';
+	ID	FullNm;
+	VAR	City MobilePh;
+	LABEL	FullNm		= 'Full@Name'
+			City		= '@City'
+			MobilePh	= 'Mobile@Phone Number';
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
