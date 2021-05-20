@@ -1,0 +1,590 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	2.5 - Importing Raw Data In Uncommon Structures.sas                     *
+*	PURPOSE:	Illustrate material in Chapter 2.5                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-07-31																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-18  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-16  PJB Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 2.5.1 - Multiple Observations Per Raw Data Record                       *
+*   	Section 2.5.2 - Single Observation from Multiple Raw Data Records               *
+*   	Section 2.5.3 - Reading Part of a Raw Data File                                 *
+*   	Section 2.5.4 - Additional Material                                             *
+*   	Section 2.5.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the first %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 2.5.1 - MULTIPLE OBSERVATIONS PER RAW DATA RECORD   *; RUN;
+
+
+*	Illustration 1 - How to Read Multiple Observations Per Record   *; RUN;
+
+*	First attempt using what we already know   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Arms.dat"	DELIMITER = '|';
+	INPUT	Subject_ID	:$4.
+			START_DATE	:DATE9.
+			Treat		:$9.	;
+	RUN;
+*	Note:  This code didn't produce any errors (but didn't produce desired result)   *;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	START_DATE	WORDDATE.;
+	RUN;
+
+
+*	The double-trailing @@ will hold a record in the input buffer until either
+	1)	The record runs out of data, or
+	2)	An INPUT statement without the double-trailing @@ executes
+
+	This illustration will also create the 'Arms' SAS data set in the 'CanImpt' library   *;
+DATA	CanImpt.Arms;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Arms.dat"	DELIMITER = '|';
+	INPUT	Subject_ID	:$4.
+			START_DATE	:DATE9.
+			Treat		:$9.	@@;
+	FORMAT	START_DATE	DATE9.;
+	RUN;
+
+PROC PRINT DATA = CanImpt.Arms;
+	FORMAT	START_DATE	WORDDATE.;
+	RUN;
+
+
+*	Illustration 2 - Using Multiple Input Styles When Reading Multiple Observations Per Record   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	SubjID	$				/* List Input */
+			Name		$15.		/* Formatted Input */
+			BirthDt		:MMDDYY10.	/* Modified List Input */	@@;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+001  Allie Allison   11/12/1980  002  Bob Benson      6/7/1967
+003  Chris Clarkson  1/2/03      004  Dani Dixon      050698
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	BirthDt	WORDDATE.;
+	RUN;
+
+
+*	Illustration 3 - Alternate Structure of Multiple Observations Per Record   *; RUN;
+
+*	First attempt using what we already know   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/groups.dat"	DELIMITER = ':,'; * Note the data has 2 delimiters *;
+	INPUT	Treatment	:$21.
+			pt_id			;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	The problem is we are only getting 1 value of pt_id per record.
+	We need to keep the record in the Input Buffer so that we can read the remaining pt_id values
+
+	Use a "Single-Trailing @" to hold the record in the input buffer until:
+	1)	An INPUT statement without a trailing @ executes, or
+	2)	The next iteration of the DATA step begins
+
+	Use the OUTPUT statement to explicitly export the values in the PDV to an observation in
+		the output data set   *;
+*	This illustration will also create the 'groups' SAS data set in the 'CanImpt' library   *;
+DATA	CanImpt.groups;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/groups.dat"	DELIMITER = ':,';
+
+	INPUT	Treatment	:$21.
+			pt_id		@;
+		OUTPUT;
+
+	INPUT	pt_id	@;
+		OUTPUT;
+
+	IF	_N_ = 1 THEN DO; * This is because the 1st record has 3 subjects, but the 2nd record only has 2 *;
+		INPUT	pt_id;
+		OUTPUT;
+	END;
+
+	RUN;
+*	This situation could be handled better using a DO group
+	We will learn more about DO groups in Part 3 of the course   *;
+
+PROC PRINT DATA = CanImpt.groups;
+	RUN;
+
+
+*	Illustration 4 - Use the Single-Trailing @ Importing a Variable With Multiple Formats   *; RUN;
+
+*	Note:  Enrollment dates for NJCC subjects are entered as MM/DD/YYYY
+		   Enrollment dates for OICR subjects are entered as DD/MM/YYYY   *;
+*	Initial attempt might look like this:   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Site		$4.
+			@7	SubjID		3.
+			@10	EnrollDt	MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+NJCC  1  6/1/2015
+NJCC  2  6/26/2015
+NJCC  3  7/24/2015
+OICR  1  28/7/2015
+OICR  2  3/8/2015
+NJCC  4  8/7/2015
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT EnrollDt WORDDATE.;
+	RUN;
+*	Note:  SAS can't read in 28/7/2015.
+		   Also, 3/8/2015 has been read as March 8 instead of August 3.
+
+	It is clear the informat needed for the date depends on the value of Site.
+	Therefore, conditional logic will be needed to read the date correctly   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Site		$4.
+			@7	SubjID		3.	;
+	IF			Site	= 'NJCC'	THEN	INPUT	@10	EnrollDt	MMDDYY10.;
+		ELSE IF	Site	= 'OICR'	THEN	INPUT	@10	EnrollDt	DDMMYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+NJCC  1  6/1/2015
+NJCC  2  6/26/2015
+NJCC  3  7/24/2015
+OICR  1  28/7/2015
+OICR  2  3/8/2015
+NJCC  4  8/7/2015
+;
+
+*	Look at the WORK.Illus data set to investigate what went wrong   *;
+PROC PRINT	DATA = WORK.Illus;
+	FORMAT	EnrollDt	WORDDATE30.;
+	RUN;
+
+*	Use the single trailing @ to hold the record in the input buffer
+		while the value of Site is tested!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Site		$4.
+			@7	SubjID		3.	@;
+	IF			Site	= 'NJCC'	THEN	INPUT	@10	EnrollDt	MMDDYY10.;
+		ELSE IF	Site	= 'OICR'	THEN	INPUT	@10	EnrollDt	DDMMYY10.;
+	FORMAT	EnrollDt	WORDDATE.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+NJCC  1  6/1/2015
+NJCC  2  6/26/2015
+NJCC  3  7/24/2015
+OICR  1  28/7/2015
+OICR  2  3/8/2015
+NJCC  4  8/7/2015
+;
+
+PROC PRINT	DATA = WORK.Illus;
+	FORMAT	EnrollDt	WORDDATE30.;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.5.1   |
+* ----------------------------- *
+	Task:  Complete the INPUT statement to successfully read the in-stream data below
+			to create variables named 'Month' and 'TempF'
+			The 'NYTemps' data set should have 12 observations and 2 variables   *;
+DATA	WORK.NYTemps;
+	INFILE	DATALINES;
+	INPUT	Month	$
+			TempF	@@;
+	DATALINES;
+JAN 39 FEB 42 MAR 50 APR 62 MAY 72 JUN 80
+JUL 85 AUG 84 SEP 76 OCT 65 NOV 54 DEC 44
+;
+
+
+
+
+*	SECTION 2.5.2 - SINGLE OBSERVATION FROM MULTIPLE RAW DATA RECORDS   *; RUN;
+
+
+*	Illustration 1 - Using Multiple INPUT Statements to Read Multiple Records   *; RUN;
+
+*	First examine the Demographics.dat file
+
+	Note:  There are 2 records per logical observation
+			The data are column-aligned
+	Note:  'gender', 'Hisp', and 'race' are coded variables
+
+	Recall:  Every time SAS executes an INPUT statement a new record is loaded into the Input Buffer   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Demographics.dat"	N = 2; * Specifies the number of records to keep in the input buffer *;
+	INPUT	patient	2
+			gender	3
+			Hisp	4
+			race	5;
+	INPUT	@1	BirthDt		DDMMYY10.
+			@11	OnStudy		MMDDYY6.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	BirthDt OnStudy WORDDATE.;
+	RUN;
+
+*	Note:  If we didn't want the variables on the 2nd record, we could've submitted a blank 2nd INPUT statement   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Demographics.dat"	N = 2;
+	INPUT	patient	2
+			gender	3
+			Hisp	4
+			race	5;
+	INPUT;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Using a Slash to Input the Next Record Into the Input Buffer   *; RUN;
+
+*	The slash is a relative line pointer control - it instructs SAS to load the next record
+	Note:  Only 1 INPUT statement is needed   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Demographics.dat"	N = 2; * Specifies the number of records to keep in the input buffer *;
+	INPUT		patient	2
+				gender	3
+				Hisp	4
+				race	5
+			/	@1	BirthDt		DDMMYY10.
+				@11	OnStudy		MMDDYY6.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	BirthDt OnStudy WORDDATE.;
+	RUN;
+
+
+*	Illustration 3 - Using An Absolute Line Pointer Control   *; RUN;
+
+*	The # character instructs SAS to read from that specified record in the Input Buffer
+	Note:  When SAS compiles the DATA step, it reads the INPUT statement and the #2 tells SAS that it
+		needs to build an Input Buffer with 2 records to produce each observation
+	This illustration will also create the 'Demographics' SAS data set in the 'CanImpt' library   *;
+DATA	CanImpt.Demographics;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Demographics.dat"	N = 2; * Specifies the number of records to keep in the input buffer *;
+	INPUT		patient	2
+				gender	3
+				Hisp	4
+				race	5
+			#2	@1	BirthDt		$ 1-10	/* #2 instructs SAS to read from the 2nd record */
+				@11	OnStudy		MMDDYY6.;
+	RUN;
+
+PROC PRINT DATA = CanImpt.Demographics;
+	FORMAT	OnStudy WORDDATE.;
+	RUN;
+
+
+*	Illustration 4 - Reading Multiple Records per Observation from a Delimited File   *; RUN;
+
+*	First examine the PatInfo.dat file
+	Note:  There are 3 records per logical observation
+			The data is delimited
+	Note:  This also illustrates it is possible to mix line pointer controls (/ and #)
+
+	This illustration will also create the 'PatInfo' SAS data set in the 'CanImpt' library   *;
+DATA	CanImpt.PatInfo;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/PatInfo.dat"	N = 3	DLMSTR='::'	MISSOVER DSD;
+	INPUT		pat			:$4.
+				pat_name	:$30.
+			/	Address		:$50.
+			#3	Phone_H		:$13.
+				Phone_C		;
+	RUN;
+
+PROC PRINT DATA = CanImpt.PatInfo;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.5.2   |
+* ----------------------------- *
+	Task:  Complete the INPUT statement to successfully read the in-stream data below
+			to create a data set named 'CityInfo' with data as shown below
+			(i.e. the variables should appear in the order as displayed):
+
+	Population  RainIn  City
+	----------  ------  ---------
+    693060      14      Denver
+	704352      37      Seattle
+	2751796     59      Miami
+	352769      31      Honolulu
+
+	Hint:  Read the 2nd row first, then read only the city in the 1st row   *;
+DATA	WORK.CityInfo;
+	INFILE	DATALINES N = 2;
+	INPUT		/ Population COMMA9.
+				RainIn
+				#1 City $12-19;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+Colorado   Denver
+693,060    14
+Washington Seattle
+704,352    37
+Florida    Miami
+2,751,796  59
+Hawaii     Honolulu
+352,769    31
+;
+
+
+
+
+*	SECTION 2.5.3 - READING PART OF A RAW DATA FILE   *; RUN;
+
+
+*	Illustration 1 - Testing a Variable's Value To Keep Only Desired Records   *; RUN;
+
+*	Goal:  Keep only observations from New Jersey
+	First attempt might look like this:   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Site $4.	@;
+	IF	Site = 'NJCC'	THEN INPUT		SubjID	7
+									@10	EnrollDt	MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+NJCC  1  6/1/2015
+NJCC  2  6/26/2015
+NJCC  3  7/24/2015
+OICR  1  28/7/2015
+OICR  2  3/8/2015
+NJCC  4  8/7/2015
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	EnrollDt	WORDDATE.;
+	RUN;
+
+
+*	Solution:  
+	1)	Read in just the variable needed to test its value
+	2)	Hold the observation in the PDV using the Single-Trailing @
+	3)	Filter observations using the Subsetting IF statement to test the variable value
+	4)	Proceed importing the remaining variables with another INPUT statement   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	Site		$4.	@;
+	IF	Site = 'NJCC';
+	INPUT		SubjID	7
+			@10	EnrollDt	MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+NJCC  1  6/1/2015
+NJCC  2  6/26/2015
+NJCC  3  7/24/2015
+OICR  1  28/7/2015
+OICR  2  3/8/2015
+NJCC  4  8/7/2015
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	EnrollDt	WORDDATE.;
+	RUN;
+
+
+
+
+*	SECTION 2.5.4 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - Omitting the N= INFILE Statement Option   *; RUN;
+
+*	There are no issues if reading variables in the same order as the input records   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/PatInfo.dat"	DLMSTR='::'	MISSOVER DSD;
+	INPUT		pat			:$4.
+				pat_name	:$30.
+			/	Address		:$50.
+			/	Phone_H		:$13.
+				Phone_C		;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	There are no issues if reading variables in a different order but the highest line # is specified   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/PatInfo.dat"	DLMSTR='::'	MISSOVER DSD;
+	INPUT	#3	Phone_H		:$13.
+				Phone_C		
+			#1	pat			:$4.
+				pat_name	:$30.
+			/	Address		:$50.	;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	There can be issues if reading variables in a different order and the highest line # is not specified
+	This INPUT statement attempts to read from Row 2, then Row 1, then Row 3   *;
+DATA	WORK.Illus2;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/PatInfo.dat"	DLMSTR='::'	MISSOVER DSD;
+	INPUT	/	Address		:$50.	
+			#1	pat			:$4.
+				pat_name	:$30.
+			//	Phone_H		:$13.
+				Phone_C		;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus2;
+	RUN;
+*	Note:  SAS interprets the / as discarding the first record to get to the 2nd record.
+			Then it reads the #1 and says "I don't have that record anymore".
+	So if you want to read this data out of order, it's best to build a 3-line input buffer by using N=3!	*;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/PatInfo.dat"	N=3 DLMSTR='::'	MISSOVER DSD;
+	INPUT	/	Address		:$50.	
+			#1	pat			:$4.
+				pat_name	:$30.
+			//	Phone_H		:$13.
+				Phone_C		;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Writing an Observation to Multiple Records   *; RUN;
+
+*	This code will export data to a data file (.dat) in a structure of multiple
+		records from each observation in the SAS data set   *;
+FILENAME	CanOut	"&CourseRoot/Cancer RCT/Data";
+
+DATA	_NULL_;
+	SET	CanImpt.PatInfo;
+	FILE	CanOut(Pt Info Export.dat)	DLMSTR='::' DSD;
+	PUT		pat pat_name
+		/	address
+		/	Phone_H Phone_C;
+	RUN;
+
+FILENAME	CanOut	CLEAR;
+
+
+*	Illustration 3 - Writing Multiple Observations to a Single Record   *; RUN;
+FILENAME	CanOut	"&CourseRoot/Cancer RCT/Data";
+
+DATA	_NULL_;
+	SET	CanImpt.Arms;
+	FILE	CanOut(Arms Export.txt);
+	IF			_N_ <= 3 THEN	PUT	Subject_ID START_DATE YYMMDDD10. +1 Treat +4 @@;
+		ELSE IF _N_ = 4	 THEN	PUT	Subject_ID START_DATE YYMMDDD10. +1 Treat;
+		ELSE IF _N_ <= 7 THEN	PUT	Subject_ID START_DATE YYMMDDD10. +1 Treat +4 @@;
+		ELSE IF _N_ = 8	 THEN	PUT	Subject_ID START_DATE YYMMDDD10. +1 Treat;
+		ELSE 					PUT	Subject_ID START_DATE YYMMDDD10. +1 Treat +4 @@;
+	RUN;
+
+FILENAME	CanOut	CLEAR;
+
+
+
+
+*	SECTION 2.5.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.5.1   |
+* ----------------------------- *
+	Task:  Complete the INPUT statement to successfully read the in-stream data below
+			to create variables named 'Month' and 'TempF'
+			The 'NYTemps' data set should have 12 observations and 2 variables   *;
+DATA	WORK.NYTemps;
+	INFILE	DATALINES;
+	INPUT	Month $
+			TempF	@@;
+	DATALINES;
+JAN 39 FEB 42 MAR 50 APR 62 MAY 72 JUN 80
+JUL 85 AUG 84 SEP 76 OCT 65 NOV 54 DEC 44
+;
+
+PROC PRINT DATA = WORK.NYTemps;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.5.2   |
+* ----------------------------- *
+	Task:  Complete the INPUT statement to successfully read the in-stream data below
+			to create a data set named 'CityInfo' with data as shown below
+			(i.e. the variables should appear in the order as displayed):
+
+	Population  RainIn  City
+	----------  ------  ---------
+    693060      14      Denver
+	704352      37      Seattle
+	2751796     59      Miami
+	352769      31      Honolulu
+
+	Hint:  Read the 2nd row first, then read only the city in the 1st row   *;
+DATA	WORK.CityInfo;
+	INFILE	DATALINES N = 2;
+	INPUT	/	Population COMMA9.
+				RainIn
+			#1	City $ 12-19;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+Colorado   Denver
+693,060    14
+Washington Seattle
+704,352    37
+Florida    Miami
+2,751,796  59
+Hawaii     Honolulu
+352,769    31
+;
+
+PROC PRINT DATA = WORK.CityInfo;
+	RUN;
+
+*	Here's another INPUT statement which would work ...
+	INPUT	#2		Population COMMA9.
+					RainIn
+			#1	@12	City :$8.;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
