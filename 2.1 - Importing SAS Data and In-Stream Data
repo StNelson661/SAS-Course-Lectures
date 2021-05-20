@@ -1,0 +1,501 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	2.1 - Importing SAS Data and In-Stream Data.sas                         *
+*	PURPOSE:	Illustrate material in Chapter 2.1                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-08-06																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	Source.Scans & In-Stream Data                                           *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-05  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-09  PJB Combined Chapters 2.1 and 2.2                           *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 2.1.1 - How SAS Processes the DATA Step                                 *
+*   	Section 2.1.2 - Importing a SAS Data Set                                        *
+*   	Section 2.1.3 - In-Stream Data                                                  *
+*   	Section 2.1.4 - Additional Material                                             *
+*   	Section 2.1.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = /folders/myfolders/BIOS 6680- SAS;
+LIBNAME CanSrc  "&CourseRoot/Cancer RCT/Data/1_Source";
+LIBNAME CanImpt "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 2.1.1 - HOW SAS PROCESSES THE DATA STEP   *; RUN;
+
+*	When a DATA step is submitted, SAS processes the DATA step internally
+	The DATA step is processed in 2 phases:
+	1)	Compilation
+	2)	Execution
+
+	During the compilation phase, SAS performs the following:
+	1)	Scans the program for syntax errors and translates the program into machine language
+	2)	Creates the Program Data Vector (PDV)
+		-	The PDV is an area in memory in which SAS holds one observation
+		-	When the PDV is created, a slot is created for each variable in the order that SAS
+				encounters each variable (provided it can determine the name, type, and length)
+	3)	Creates the descriptor portion of the output data set
+
+	If no errors are found during compilation, SAS proceeds to the execution phase
+	During execution, SAS does the following:
+	1)	Initializes the PDV to missing (sets the value for each variable to missing)
+	2)	Processes each observation one at a time, running each observation through the DATA step
+		-	Each executable statement is executed
+		-	Declarative statements are NOT executed (SAS only processes them during compilation)
+			(Declarative statement are a.k.a. Compile-time only statements, and non-executable statements)
+		Recall:  DATA step statements are either Declarative or Executable
+	3)	At the end of the DATA step, SAS automatically:
+		A)	Outputs the contents of the PDV as an observation to the output data set
+				This is an implicit OUTPUT statement
+		B)	Returns to the top of the DATA step (an implicit RETURN statement)
+			i)	Existing variables are retained in the PDV
+			ii)	New variables are re-initialized to missing
+	in pdv the overall original source data is retained at the start of each data set. the new variables are re-initalized to missing
+		at the start of each step.
+	This process continues until SAS reaches the End of File (EOF)   *;
+
+
+
+
+*	SECTION 2.1.2 - IMPORTING A SAS DATA SET   *; RUN;
+
+*	The DATA statement is always the first statement in the DATA step
+		It is a Declarative statement
+		The DATA statement names the data set which is created in the DATA step
+	
+	The SET statement specifies the name of 1 or more source SAS data sets
+		It is an Executable statement
+	Each time the SET statement executes, SAS reads one observation into the Program Data Vector (PDV)
+	Typically, the number of times the DATA step will iterate (i.e. loop) is equal to the number of
+		observations in the data set being read using the SET statement.   *;
+
+
+*	Illustration 1 - Using the SET Statement   *; RUN;
+
+*	Goal:  Create a temporary data set named 'Illus' which contains the data
+			from the 'CanSrc.Scans' data set
+
+	Note:  After creating a new data set, it is a great practice to check the read and write counts
+			in the log window!   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans;
+	RUN;
+
+*	We can now browse the new data set   *;
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - SAS Retains Values of Source Variables at the Start of Loops 2 and On   *; RUN;
+
+*	The PUTLOG statement writes whatever is specified to the log
+		_ALL_ specifies to write every variables name and value to the log   *;
+DATA	WORK.Illus;
+
+	PUTLOG	'BEFORE the SET Stmt:  ' _ALL_;
+
+	SET	CanSrc.Scans	(OBS = 2);
+
+	PUTLOG	' AFTER the SET Stmt:  ' _ALL_;
+	PUTLOG '.'; * This statement is simply to add space between the data being written to the log *;
+
+	RUN;
+*	Notice that SAS also creates two "automatic" variables:
+	1)	_N_, which is a counter for the number of times SAS has iterated through the DATA step, and
+	2)	_ERROR_, which is an indicator variable for whether or not SAS has detected a data error   *;
+
+
+*	Illustration 3 - SAS Can Overwrite an Existing SAS Data Set   *; RUN;
+
+*	When working with a data set, it is common to overwrite the data set instead of creating
+		different copies of the data set that is being processed
+
+	This is creating a data set named 'Illus' which contains the 'CanSrc.Scans' data   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	In this step, WORK.Illus is over-writing WORK.Illus and adding a new variable (Diff)   *;
+DATA	WORK.Illus;
+	SET	WORK.Illus;
+	Diff = LesionSumCmMon6 - LesionSumCmMon0;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Let's look at the how SAS processes the new variable in the PDV   *;
+DATA	WORK.Illus;
+	PUTLOG	'BEFORE the SET Stmt:  ' LesionSumCmMon0= LesionSumCmMon6= Diff=;
+
+	SET	CanSrc.Scans	(OBS = 3);
+
+	Diff = LesionSumCmMon6 - LesionSumCmMon0;
+
+	PUTLOG	' AFTER the SET Stmt:  ' LesionSumCmMon0= LesionSumCmMon6= Diff=;
+	PUTLOG '.';
+	RUN;
+
+
+*	Illustration 4 - Using the SET Statement's NOBS= Option   *; RUN;
+
+*	The SET statement has an option with syntax:  NOBS = variable
+	NOBS= creates and names a temporary variable whose value is usually the total number
+		of observations in the input data set.
+	Note:  The temporary variable is not output to the output data set   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans	NOBS = Count; * Note:  Count is a temporary variable *;
+	RUN;
+
+*	The value of the temporary variable can be seen by sending the contents of the PDV to the log
+	Note:  The value is obtained during compilation and is thus in the PDV before any observations
+			have been read into the PDV   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans	NOBS = Count;
+	PUTLOG	_N_= SubjID= Count=;
+	RUN;
+
+*	If the value is desired in the output data set, a variable set equal to that value can be created   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans	NOBS = Count;
+	NewVar = Count;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 5 - Using the SET Statement's END= Option   *; RUN;
+
+*	The SET statement has an option with syntax:  END = variable
+	END= creates and names a temporary variable that contains an end-of-file indicator
+	The variable is initialized to 0 and set to 1 when the SET statement reads the
+		last observation of the data set in the SET statement.   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans	END = LastObs; * Note:  LastObs is also a temporary variable *;
+	RUN;
+
+*	The value of the temporary variable can be seen by sending the contents of the PDV to the log   *;
+*	Note:  The value is obtained during compilation and is thus in the PDV before any observations
+			have been read into the PDV   *;
+DATA	WORK.Illus;
+	SET	CanSrc.Scans	END = LastObs;
+	PUTLOG	LastObs= _N_= SubjID=;
+	RUN;
+
+
+*	Illustration 6 - Import the Scans Data Set Into the '2_Import' Folder   *; RUN;
+
+*	Task:  Create a SAS data set named 'Scans' in the '2_Import' folder
+	Note:  A libref for the destination folder needs to be in place (see top of program)   *;
+DATA	NDI;
+	SET	CanSrc.Scans;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.1.2   |
+* ----------------------------- *
+	Task:  Create a temporary data set named 'GMCs' using the 'SASHelp.Cars' data set
+			as the source data set.
+			(I will provide code to filter the data set to 'GMC' cars)
+	Instructions:  Replace each instance of 'Aaaaa' etc with code to accomplish the task   *;
+DATA GMC;
+	Set sashelp.cars;
+	WHERE Make = 'GMC';
+	RUN;
+
+
+
+
+*	SECTION 2.1.3 - IN-STREAM DATA   *; RUN;
+
+*	In-stream data are data created within the DATA step
+
+	The DATALINES statement is a Step Boundary (like RUN and QUIT statements)
+		As such, a RUN statement is NOT needed at the end of the DATA step!
+
+	Only data are permitted after the DATALINES statement (alias is CARDS)
+		To clarify, not even comments may be placed in the data section
+		Any additional statements must be made between the INPUT and DATALINES statements
+	Only a semicolon is needed following the rows containing the data
+
+	The INFILE statement specifies the source of the data
+		The INFILE option 'DATALINES' specifies that the data follow the DATALINES statement
+		The INFILE statement is not required unless any INFILE options are desired
+	Syntax for the INFILE and INPUT statements will be presented in Chapters 2.3 - 2.5	;
+
+
+*	Illustration 1 - Creating In-Stream Data   *; RUN;
+
+*	Goal:  Create a temporary data set named 'DENSports' which contains the following data
+			The data values should be comma-separated
+
+			Sport		Team				FirstYr
+			----------	------------------	-------
+			Baseball    Colorado Rockies	1993
+			Basketball  Denver Nuggets		1967
+			Football    Denver Broncos		1960
+			Hockey		Colorado Avalanche	1972
+			Lacrosse	Colorado Mammoth	2003
+			Soccer		Colorado Rapids		1996	*;
+
+DATA WORK.DENSports;
+	INFILE	DATALINES	DELIMITER = ',';
+	INPUT	Sport	:$10.
+			Team	:$18.
+			FirstYr	;
+	DATALINES;
+Baseball,Colorado Rockies,1993
+Basketball,Denver Nuggets,1967
+Football,Denver Broncos,1960
+Hockey,Colorado Avalanche,1972
+Lacrosse,Colorado Mammoth,2003
+Soccer,Colorado Rapids,1996
+;
+
+*	Let's check the values for the data set!   *;
+PROC PRINT DATA = WORK.DENSports;
+	RUN;
+
+
+*	Illustration 2 - Creating In-Stream Data   *; RUN;
+
+*	Task:  Create a SAS data set named 'Sites' in the 'CanImpt' library
+			using the specifications in the 'Data Map.xlsx' file
+
+	The 'Data Map.xlsx' file contains:
+	1)	The variable attribute specifications
+	2)	The variable values   			*;
+DATA	CanImpt.Sites;
+	INFILE	DATALINES	DELIMITER = ',';
+	INPUT	SiteCd
+			SiteAbrv	:$4.
+			SiteNm		:$35.	;
+	DATALINES;
+1,NJCC,New Jersey Cancer Center
+2,OICR,Oregon Institute of Cancer Research
+;
+
+
+*	Illustration 3 - Creating Values Containing Semicolons   *; RUN;
+
+*	Note:  If any values contain semicolons, the DATALINES4 statement must be used as the step
+				boundary prior to the rows of data
+		   The data section is closed using 4 semicolons   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	SASStmts	$	1-17;
+	DATALINES4;
+DATA Libref.Name;
+PROC SOMETHING;
+RUN; and/or QUIT;
+OPTION;
+;;;;
+
+*	Check the resulting data set   *;
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.1.3   |
+* ----------------------------- *
+	Task:  Create a temporary data set named 'Ages' which contains 3 rows of data
+			The data values should be comma-separated
+
+			The 3 rows of data should contain the following values:
+			Name			Age
+			--------------	---
+			Alice Anderson	30
+			Bob Benson		28
+			Chris Carlson	57
+
+	Instructions:  Replace each instance of 'Aaaaa' or [enter-data-here] etc with
+					code to accomplish the task   *;
+DATA Ages;
+	INFILE DATALINES	DELIMITER = ',';
+	INPUT	Name	:$14.
+			Age;
+	DATALINES;
+Alice Anderson,30,
+Bob Benson,28,
+Chris Carlson,57
+;
+
+
+
+
+*	SECTION 2.1.4 - ADDITIONAL MATERIAL   *; RUN;
+
+*	When the SET statement is used, SAS processes each observation in the specified data set
+	We'll use this because we will typically be processing data
+		(i.e. creating new variables, etc.)
+
+	If your goal is simply to copy a data set, it is more efficient to NOT process each observation
+	Instead, you could use PROC COPY to copy the data set to a different location (i.e. folder)
+	Note:  PROC COPY doesn't allow a data set name to be changed
+	If your goal is to change the data set name, you could use PROC DATASETS to do so   *;
+
+*	Before this illustration, let's delete the CanImpt.Scans data set   *;
+PROC DATASETS
+		LIBRARY	= CanImpt
+		NOPRINT	;
+	DELETE	Scans;
+	QUIT;
+
+
+*	Illustration 1 - Using PROC COPY to Copy a SAS Data Set    *; RUN;
+
+*	Goal:  Place a copy of the 'Scans' data set into the 'CanImpt' folder
+	IN= and OUT= specify libraries (so use the librefs)   *;
+PROC COPY
+		IN	= CanSrc
+		OUT	= CanImpt;
+	SELECT	Scans;
+	RUN;
+
+
+*	Illustration 2 - Changing the Name of a SAS Data Set    *; RUN;
+
+*	Goal:  Rename the 'Scans' data set to 'Cancer_Scans'   *;
+PROC DATASETS
+		LIBRARY	= CanImpt
+		NOPRINT	;
+	CHANGE	Scans	= Cancer_Scans;
+	QUIT;
+*	Note:  PROC DATASETS is ended with a QUIT statement
+
+	Now let's change the name back to 'Scans' as that's what we'll use in the future!   *;
+PROC DATASETS
+		LIBRARY	= CanImpt
+		NOPRINT	;
+	CHANGE	Cancer_Scans	= Scans;
+	QUIT;
+
+
+*	Illustration 3 - Editing Data Manually    *; RUN;
+
+*	Data sets may also be created when using the SAS Windowing Environment interface
+		by using the Viewtable
+
+	Task:  Enter the following data:
+
+	Player	HR
+	------	---
+	Bonds	762
+	Aaron	755
+	Ruth	714
+
+	Steps:
+	1)	Click on Tools -> Table Editor
+
+	2)	Right-click on column 'A', select 'Column Attributes' and enter:
+			Name:   Player
+			Label:  Player Name
+			Length: 10 (notice the Format and Informat both change to $10.)
+			Type:   (leave as 'Character')
+		Click 'Close'
+
+	3)	Right-click on column 'B', select 'Column Attributes' and enter:
+			Name:   HR
+			Label:  Home Runs
+			Type:   Click on 'Numeric'
+		Click 'Close'
+
+	4)	Click on row 1 of the 'Player' cell and type 'Bonds'
+		Press 'Tab' and enter '762', then 'Enter'
+		Repeat for rows 2 and 3
+
+	5)	Click on 'File' -> 'Save As...' -> Click on the 'Work' library
+			enter 'CareerHRs' after 'Member Name:' 
+
+	6)	Close the table, then re-open it
+		Notice that the name, type, and length can't be changed (they're grayed out)
+
+	7)	To add a row of data in Table View:
+		1: Open the table
+		2: Click the 'Edit' button (data set icon with pencil)
+		3: Click the 'Add Row' button (paper icon with pencil)
+		4: Enter 'Rodriguez' and '696'
+		5: Click on 'Commit New Row' (check box)
+
+	8)	To add a row of data in Form View:
+		1: Click the 'Form View' icon (icon looks like 3 name/value pairs on a form)
+		2: Click the 'Add Row' button (paper icon with pencil)
+		3: Enter 'Mays' and '660'
+		4: Click on 'Commit New Row' (check box)
+		5: Click the 'Table View' icon to see the entire table
+
+	Note:  When 'Edit' mode is selected (as opposed to 'Browse' mode), the
+			values may be edited, whether using 'Table View' or 'Form View'   *;
+
+
+
+
+*	SECTION 2.1.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.1.2   |
+* ----------------------------- *
+	Task:  Create a temporary data set named 'GMCs' using the 'SASHelp.Cars' data set
+			as the source data set.
+			(I will provide code to filter the data set to 'GMC' cars)
+	Instructions:  Replace each instance of 'Aaaaa' etc with code to accomplish the task   *;
+DATA WORK.GMCs;
+	SET SASHelp.Cars;
+	WHERE Make = 'GMC';
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.1.3   |
+* ----------------------------- *
+	Task:  Create a temporary data set named 'Ages' which contains 3 rows of data
+			The data values should be comma-separated
+
+			The 3 rows of data should contain the following values:
+			Name			Age
+			--------------	---
+			Alice Anderson	30
+			Bob Benson		28
+			Chris Carlson	57
+
+	Instructions:  Replace each instance of 'Aaaaa' or [enter-data-here] etc with
+					code to accomplish the task   *;
+DATA WORK.Ages;
+	INFILE DATALINES	DELIMITER = ',';
+	INPUT	Name	:$14.
+			Age;
+	DATALINES;
+Alice Anderson,30
+Bob Benson,28
+Chris Carlson,57
+;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
