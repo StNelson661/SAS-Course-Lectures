@@ -1,0 +1,1113 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	3.3 - Creating New Variables.sas                                        *
+*	PURPOSE:	Illustrate material in Chapter 3.3                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-08-06																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-19  SMN Added TOC & Comprehension Checks                        *
+*               2019-09-18  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 3.3.0 - Assignment Statement Syntax                                     *
+*   	Section 3.3.1 - Creating Constants                                              *
+*   	Section 3.3.2 - Creating Variables Based On Other Variables                     *
+*   	Section 3.3.3 - Creating Variables Using Conditional Logic                      *
+*   	Section 3.3.4 - Creating Accumulating Variables                                 *
+*   	Section 3.3.5 - FIRST. and LAST. Automatic Variables                            *
+*   	Section 3.3.6 - Variable List Shortcuts                                         *
+*   	Section 3.3.7 - Additional Material                                             *
+*   	Section 3.3.8 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+LIBNAME CanTabs    "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME HypImpt    "&CourseRoot/Hypertension Study/Data/2_Import";
+OPTIONS FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY);
+
+
+
+
+*	SECTION 3.3.0 - ASSIGNMENT STATEMENT SYNTAX   *; RUN;
+
+*	The Assignment Statement is used to create variables
+	Note:  This is a rare statement which doesn't start with a keyword!
+	Syntax:  Variable = expression;
+
+
+
+
+*	SECTION 3.3.1 - CREATING CONSTANTS   *; RUN;
+
+
+*	Illustration 1 - Character Constants   *; RUN;
+
+*	SAS will create a character variable upon reading a quoted string
+	Recall that anything may be contained within the quoted string   *;
+DATA	WORK.Illus;
+	FirstNm		= 'Ed';
+	FullNm		= 'Allison Amy Anderson'; * More than 8 characters *;
+	Profit		= '-750'; * Character value composed of numeric digits *;
+	Statement	= 'RUN;'; * Contains semicolon *;
+	Quote		= '"I love SAS!"'; * Contains quotation marks *;
+	RestaurantNm	= "Al's Eatery"; * Contains apostraphe *;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Numeric Constants   *; RUN;
+
+*	The expression must simply be a valid numeric value as defined by SAS   *;
+DATA	WORK.Illus;
+	Year		= 2017; * Natural number *;
+	Profit		= -750; * Negative number *;
+	HourlyPay	= 9.25; * Decimal *;
+	MilesToSun	= 9.3E7; * Scientific Notation *;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Numeric Constants Based on Evaluating an Expression   *; RUN;
+
+DATA	WORK.Illus;
+	Year	= 2000 + 17;
+	Expr1	= 10 + 2 * 4; * SAS will evaluate using the Order of Operations *;
+	Expr2	= (10 + 2) * 4; * Use parentheses to control the evaluation *; 
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 5 - Date Constants   *; RUN;
+
+*	Dates may be entered as a "date constant" by:
+		1) Writing the date in a 'DATE' format (e.g. 25DEC2014)
+		2) Enclosing it with quotes (either single or double)
+		3) Follow it with the letter D (either lower- or uppercase)  *;
+DATA	WORK.Illus;
+	CANIndepDay	= '01JUL1867'D;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	CANIndepDay	WORDDATE32.;
+	RUN;
+
+
+*	Illustration 6 - Time Constants   *; RUN;
+
+DATA	WORK.Illus;
+	Alarm	= '04:55:00'T;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	Alarm	TIMEAMPM.;
+	RUN;
+
+*	Note: The default width of the TIMEAMPM. format is 11 characters
+			If you don't want to see the seconds, shorted the display be specifying 8 characters   *;
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	Alarm	TIMEAMPM8.;
+	RUN;
+
+
+*	Illustration 7 - DateTime Constants   *; RUN;
+
+*	Note:  DateTime values are number of seconds since 12:00:00 AM on Janurary 1, 1960 *;
+DATA	WORK.Illus;
+	ChildBirth		= '01FEB2003:15:56'DT;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	ChildBirth	DATEAMPM22.; * Show also using the COMMA13. format *;
+	RUN;
+
+
+*	Illustration 8 - Including Constants In a Data Set   *; RUN;
+
+*	Constants will be applied to every observation in a processed data set   *;
+DATA	WORK.Illus;
+	* Placing new variables before the SET statement simply places them first in the PDV *;
+	Teacher	= 'Mrs. Collins';
+	Year	= 2004;
+	SET	SASHelp.Class;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 9 - Using the RETAIN statement   *; RUN;
+
+*	The RETAIN statement instructs SAS to retain the value of the variable specified
+		(instead of re-initializing it to missing at the start of each DATA step iteration)
+	An initial value may be specified for the variable
+
+	Creating a constant with a RETAIN statement is more efficient than with an assignment statement   *;
+DATA	WORK.Illus;
+	RETAIN	Teacher 'Mrs. Collins'
+			Year	2004;
+	SET	SASHelp.Class;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 10 - RETAIN Versus an Assignment Statement   *; RUN;
+
+*	A constant may be created using either an assignment statement or the RETAIN statement
+	Compare the processing of the 2 methods   *;
+DATA	WORK.Illus;
+	RETAIN	Teacher 'Mrs. Collins'; * Using the RETAIN statement *;
+	Year	= 2004; * Using an Assignment statement *;
+	SET	SASHelp.Class;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 11 - Using RETAIN to Order Variables   *; RUN;
+
+*	There is not a SAS function which explicitly orders the variables in a data set
+	The RETAIN statement is commonly used for this purpose
+
+	When SAS processes the RETAIN statement, it establishes a "slot" in the PDV for
+		each variable it encounters (in that order)
+
+	Goal:  Create a copy of the 'CanImpt.Address' data set, but re-order the variables
+			so that CELL & HOME appear immediately after ID   *;
+DATA	WORK.Illus;
+	RETAIN	ID CELL HOME;
+	SET	CanImpt.Address;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Notice the following:
+		1)  The variables in the RETAIN statement appear first
+		2)	The remaining variables are in the order they were in the source data set
+		3)	No values were altered (e.g. missing values are not filled in)
+				This is because each observation was imported from the source data set
+				So even though a value was RETAINed in the PDV, a missing value "overwrites"
+					what was in the PDV when the SET statement executes   *;
+
+
+
+
+*	SECTION 3.3.2 - CREATING VARIABLES BASED ON OTHER VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Copying a Variable    *; RUN;
+
+DATA	WORK.Illus;
+	SET	SASHelp.Class;
+	Gender	= Sex; * Creates a new character variable *;
+	AgeYrs	= Age; * Creates a new numeric variable *;
+	RUN;
+*	Note:  If the goal is the change the name, the RENAME= data set option is more efficient!   *;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	Name;
+	VAR	Sex Gender Age AgeYrs;
+	RUN;
+
+
+*	Illustration 2 - Numeric Calculations Involving Other Variables    *; RUN;
+
+DATA	WORK.Illus;
+	SET	SASHelp.Class;
+
+	AgeMons	= Age * 12; * Example of a simple calculation *;
+	AgeSq	= Age ** 2; * Example of exponentiation *;
+	BMI		= (Weight * 0.45) / (Height * 0.025)**2; * Using multiple variables *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	Name;
+	VAR	Age AgeMons AgeSq BMI;
+	FORMAT	BMI	4.1;
+	RUN;
+
+
+*	Illustration 3 - Processing Missing Values    *; RUN;
+
+*	If any value is missing the result of the calculation will be missing
+	Note:  A "Missing values" note will be generated and shown in the log   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			Quiz1	Quiz2	Quiz3;
+	TotalPoints	= Quiz1 + Quiz2 + Quiz3;
+	DATALINES;
+Amy 3 4 5
+Bob 5 2 .
+;
+*	Note:  In general, functions ignore missing values (Chapter 3.4!)   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Calculations Involving Dates    *; RUN;
+
+*	Keep in mind that the "units" when working with dates are days
+	Goal:  Create visit dates which are 1, 2, and 3 weeks after a baseline visit   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	@1	SubjID		2.
+			@4	BLVisitDt	MMDDYY10.;
+
+	Wk1VisitDt = BLVisitDt + 7;  * This is adding  7 days = 1 week *;
+	Wk2VisitDt = BLVisitDt + 14; * This is adding 14 days = 2 weeks *;
+	Wk3VisitDt = BLVisitDt + 21; * This is adding 21 days = 3 weeks *;
+	DATALINES;
+25 1/18/2017
+27 2/7/2017
+;
+
+PROC PRINT DATA = WORK.Illus;
+	ID SubjID;
+	FORMAT	BLVisitDt Wk1VisitDt Wk2VisitDt Wk3VisitDt	WEEKDATE29.;
+	RUN;
+
+
+*	Illustration 5 - The Concatenation Operator    *; RUN;
+
+*	The concatenation operator concatenates character variables or text strings (or both)
+	The concatenation operator is || (alias is !! or 2 "broken pipes")   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Address;
+
+	SubjID	=	'1-'	||	ID;
+
+	FullNm1	=	First	||	Middle	||	Last;
+	FullNm2	=	Last	!!	', '	!!	Middle	!!	First;
+
+	KEEP	ID First Middle Last SubjID FullNm1 FullNm2;
+
+	RUN;
+*	We'll learn how to improve the presentation using functions (Chapter 3.4)   *; RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR	ID SubjID First Middle Last FullNm1 FullNm2;
+	RUN;
+
+
+
+
+*	SECTION 3.3.3 - CREATING VARIABLES USING CONDITIONAL LOGIC   *; RUN;
+
+*	SAS processes observations conditionally using either:
+	1)	IF/THEN/ELSE statements, or
+	2)	SELECT/WHEN statements (see Additional Material)
+
+
+*	Illustration 1 - Using IF-THEN Statements   *; RUN;
+
+*	IF-THEN statements use the following syntax:
+		IF expression THEN statement
+	1)	If the expression following 'IF' is TRUE, SAS executes the statement following 'THEN'
+	2)	If the expression following 'IF' is FALSE, SAS doesn't execute the statement following 'THEN'
+
+	Goal:  Create a variable 'RaceCd' based on the values of 'RACE'   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	IF	RACE	= 'CAUCASIAN'			THEN	RaceCd	= 1;
+	IF	RACE	= 'AFRICAN AMERICAN'	THEN	RaceCd	= 2;
+	IF	RACE	= 'ASIAN'				THEN	RaceCd	= 3;
+
+	RUN;
+*	Note:  EVERY IF statement will execute for each observation!
+		This is NOT efficient!   *;
+
+PROC PRINT DATA = WORK.Illus;
+	ID ID;
+	VAR	RACE RaceCd;
+	RUN;
+
+
+*	Illustration 2 - Using IF-THEN/ELSE Statements   *; RUN;
+
+*	During execution, when SAS encounters an 'ELSE' statement:
+	1)	If the preceding 'IF' expression is FALSE, SAS evaluates the current 'IF' expression
+	2)	If the preceding 'IF' expression is TRUE, SAS by-passes all remaining ELSE expressions
+
+	This IS efficient!
+	Suggestion:  Use a final 'ELSE' statement to execute if all preceding 'IF' expressions are false   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	IF			RACE	= 'CAUCASIAN'			THEN	RaceCd	= 1;
+		ELSE IF	RACE	= 'AFRICAN AMERICAN'	THEN	RaceCd	= 2;
+		ELSE IF	RACE	= 'ASIAN'				THEN	RaceCd	= 3;
+		ELSE											RaceCd	= 4;
+
+	RUN;
+*	Note:  The most efficient processing would order the categories by decreasing frequency
+			More relevant for large data sets with imbalanced groups   *; 
+
+PROC PRINT DATA = WORK.Illus;
+	ID ID;
+	VAR	RACE RaceCd;
+	RUN;
+
+
+*	Illustration 3 - Using the IN Operator   *; RUN;
+
+*	The IN operator is an efficient tool to use to test a list of values
+
+	Goal:  Assign a value of '1' if the value of RaceCode is either 'A', 'B', or 'W'   *;
+DATA	WORK.Illus;
+	SET	HypImpt.UT_Records;
+
+	IF	RaceCode IN('A', 'B', 'W')	THEN	Race2Grps	= 1;
+		ELSE								Race2Grps	= 2;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID ID;
+	VAR	RaceCode Race2Grps;
+	RUN;
+	
+*	The alternative to using an IN operator is to write a compound expression
+		using the OR operator   *;
+DATA	WORK.Illus;
+	SET	HypTabs.Src_UT_Records;
+
+	IF	RaceCode	= 'A'	OR
+		RaceCode	= 'B'	OR
+		RaceCode	= 'W'		THEN	Race2Grps	= 1;
+		ELSE							Race2Grps	= 2;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID ID;
+	VAR	RaceCode Race2Grps;
+	RUN;
+
+*	NB:  When writing a compound expression, be sure that the operators (typically AND
+		or OR) are separating a COMPLETE expression!
+
+	Goal:  Create a report of only 13 or 15 year-olds
+	Can you tell what is wrong with the following compound expression? (No ERROR in the log window)?   *;
+PROC PRINT DATA = SASHelp.Class;
+	WHERE Age = 13 OR 15;
+	RUN;
+
+
+*	Illustration 5 - Using DO Groups   *; RUN;
+
+*	When an 'IF' expression is TRUE, a single statement may follow the 'THEN' keyword
+	Therefore, if you have multiple statements to execute, use the DO statement as
+		your single statement!
+	The DO statement starts a "DO Group".  DO Groups:
+		Allow an unlimited number of statements
+		Always are ended with an 'END' statement
+		Are always more efficient than processing multiple sets of IF/THEN statements   *;
+
+*	Goal:  Create 'TxGrpCd', 'TxNm', and 'Storage' based on treatment group values   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Arms;
+
+		IF		Treat	= 'ARM A:EXP'	THEN DO;
+				TxGrpCd	= 'A';
+				TxNm	= 'Gemcitabine + MUJ018';
+				Storage	= 'Cabinet 214';
+			END;
+		ELSE IF	Treat	= 'ARM B:CTL'	THEN DO;
+				TxGrpCd	= 'B';
+				TxNm	= 'Gemcitabine + Placebo';
+				Storage	= 'Cabinet 360';
+			END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	Subject_ID;
+	VAR	Treat TxGrpCd TxNm Storage;
+	RUN;
+
+
+*	Illustration 6 - Include a Group for Missing Values   *; RUN;
+
+*	Creating categories from a continuous numeric variable is efficiently coded by
+		using successive "less-than" statement
+	Note:  Missing numeric values are ordered as less than negative numbers   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+
+	IF			Lab_Value	< 4.2	THEN	RBCCat	= 'Below Normal';
+		ELSE IF	Lab_Value	<= 5.4	THEN	RBCCat	= 'Normal';
+		ELSE								RBCCat	= 'Above Normal';
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	Subject_ID;
+	VAR	Lab_Value RBCCat;
+	RUN;
+
+*	Account for missing values BEFORE the typical conditional IF/THEN/ELSE statements   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015;
+	WHERE	Lab_Test = 'RED BLOOD CELL COUNT';
+	LENGTH	RBCCat $ 12;
+
+	IF			Lab_Value	= .		THEN	RBCCat	= ' ';
+		ELSE IF	Lab_Value	< 4.2	THEN	RBCCat	= 'Below Normal';
+		ELSE IF	Lab_Value	<= 5.4	THEN	RBCCat	= 'Normal';
+		ELSE								RBCCat	= 'Above Normal';
+
+	RUN;
+*	NB: What would be created if the LENGTH statement was not included?   *;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	Subject_ID;
+	VAR	Lab_Value RBCCat;
+	RUN;
+
+
+*	Illustration 7 - Creating Indicator Variables  *; RUN;
+
+*	Indicator (a.k.a. "Dummy") variables are often used for statistical modeling
+	An indicator variable is set to 1 if an attribute is true, and 0 otherwise
+
+	Goal:  Create 4 indicator variables, 1 or each level of 'Race'
+
+*	Method 1:  Create a series of Boolean expressions
+	A Boolean expression is a logical statement that is either TRUE or FALSE
+	To create a Boolean expression in SAS, enclose the expression within parentheses
+	The Boolean expression (within each set of parentheses) is evaluated
+		If TRUE, the variable is assigned a value of 1
+		If FALSE, the variable is assigned a value of 0
+
+	Use this method!   *;
+DATA	WORK.Illus;
+	SET	HypImpt.IowaResidents;
+
+	AsianInd	= (Race = 'ASIAN');
+	BlackInd	= (Race = 'BLACK');
+	OtherInd	= (Race = 'OTHER');
+	WhiteInd	= (Race = 'WHITE');
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	SSN;
+	VAR	Race AsianInd BlackInd OtherInd WhiteInd;
+	RUN;
+
+*	Method 2:  Use a series of IF/THEN/ELSE statements   *;
+DATA	WORK.Illus;
+	SET	HypImpt.IowaResidents;
+
+	IF			Race	= 'ASIAN'	THEN DO;
+				AsianInd	= 1;
+				BlackInd	= 0;
+				OtherInd	= 0;
+				WhiteInd	= 0;
+			END;
+		ELSE IF	Race	= 'BLACK'	THEN DO;
+				AsianInd	= 0;
+				BlackInd	= 1;
+				OtherInd	= 0;
+				WhiteInd	= 0;
+			END;
+		ELSE IF	Race	= 'OTHER'	THEN DO;
+				AsianInd	= 0;
+				BlackInd	= 0;
+				OtherInd	= 1;
+				WhiteInd	= 0;
+			END;
+		ELSE IF	Race	= 'WHITE'	THEN DO;
+				AsianInd	= 0;
+				BlackInd	= 0;
+				OtherInd	= 0;
+				WhiteInd	= 1;
+			END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	SSN;
+	VAR	Race AsianInd BlackInd OtherInd WhiteInd;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.3.3   |
+* ----------------------------- *
+	The 'HypImpt.Vit_IA' data set contains systolic blood pressure data (SBP)
+	SBP values of 140 or greater are considered as hypertensive
+
+	Task:  Create a dummy variable named 'HypInd' indicating all hypertensive SBP values
+			(i.e. 'HypInd' will have values of 1 of SBP is at least 140, and 0 otherwise) *;
+DATA WORK.Hypertension;
+	SET	HypImpt.Vit_IA;
+	[enter assignment statement here];
+	RUN;
+
+PROC PRINT DATA = WORK.Hypertension;
+	VAR	SSN VisitDt SBP HypInd;
+	RUN;
+
+
+*	Illustration 8 - Using a Format to Create a Variable  *; RUN;
+
+*	Creating an example data set with a coded 'RaceCd' variable   *;
+DATA WORK.Illus;
+	INFILE DATALINES;
+	INPUT SubjID $ RaceCd;
+	DATALINES;
+1-001 2
+1-002 1
+1-003 3
+1-004 1
+1-005 1
+1-006 4
+;
+
+*	Goal:  Create a decoded variable 'RaceDecd' which contains a text value of the race
+
+	Recall:  The PUT function will create a character variable and has an argument of a format to
+				specify how to display the character values!
+	Using the PUT function is a GREAT way to easily create a new variable conditional on other values
+		if such a format exists
+
+	In this example, such a format does exist (the RaceCd format), so let's use it!
+
+	First, let's look at the format   *;
+PROC FORMAT LIBRARY = CanTabs.CanFormats FMTLIB;
+	SELECT RaceCd;
+	RUN;
+
+DATA WORK.Illus2;
+	SET WORK.Illus;
+	RaceDecd = PUT(RaceCd, RaceCd.); * This assignment statement creates the 'RaceDecd' variable *;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus2;
+	RUN;
+
+
+
+
+*	SECTION 3.3.4 - CREATING ACCUMULATING VARIABLES   *; RUN;
+
+*	Accumulating variables accumulate the value of another variable (creating a cumulative total)
+	To do so, the variable needs to keep (i.e. RETAIN) it's value across iterations of the DATA step
+
+	Goal:  Calculate the player's batting average based on all available data at the time of each game
+
+	This creates data to use for the illustrations   *;
+DATA	WORK.GameData;
+	INFILE	DATALINES;
+	RETAIN	Player	"Yogi";
+
+	INPUT	H
+			AB		;
+	DATALINES;
+0 4
+2 3
+1 3
+0 2
+3 4
+0 3
+;
+
+PROC PRINT DATA = WORK.GameData NOOBS;
+	RUN;
+
+
+*	Illustration 1 - Using Sum Statements   *; RUN;
+
+*	Sum statements also don't start with a keyword
+	Syntax for Sum statements:  AccumulatingVariable + OriginalVariable;
+
+*	By default, an accumulating variable used in a Sum statement:
+	1)	Is RETAINed across iterations of the data step
+	2)	Is set with an initial value of 0
+			(Because of these first 2 properties we no longer need the RETAIN statement!)
+	3)	Will retain it's value even when the original variable has a missing value
+
+	This will therefore accumulate the original variable across each row of data!   *;
+DATA	WORK.Illus;
+	SET	WORK.GameData;
+
+	CumulH + H;
+	CumulAB + AB;
+	CurrentAVG	= CumulH / CumulAB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus NOOBS;
+	FORMAT	CurrentAVG	5.3;
+	RUN;
+
+*	These results may be created using the RETAIN statement
+	It requires a little more code (see Additional Material)   *;
+
+
+*	Illustration 2 - Using Sum Statements with Missing Data    *; RUN;
+
+*	Assume the player did not play the 3rd game   *;
+DATA	WORK.GameMiss;
+	SET	WORK.GameData;
+
+	IF	_N_ = 3	THEN DO;
+			H = .	;
+			AB = .	;
+		END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.GameMiss NOOBS;
+	RUN;
+
+*	Using SUM statements   *;
+DATA	WORK.SUM;
+	SET	WORK.GameMiss;
+
+	CumulH + H;
+	CumulAB + AB;
+	CurrentAVG	= CumulH / CumulAB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.SUM NOOBS;
+	FORMAT	CurrentAVG	5.3;
+	RUN;
+
+*	This is contrasted with using the RETAIN statement (see Additional Material)   *;
+
+
+*	Illustration 3 - Accumulating a Constant    *; RUN;
+
+*	Above, we were accumulating values of variables
+	The Sum statement is often used to create counts
+
+	Goal:  Create a variable named 'Game' which accumulates the number of games played   *;
+DATA	WORK.SUM;
+	SET	WORK.GameMiss;
+
+	Game + 1;
+	CumulH + H;
+	CumulAB + AB;
+	CurrentAVG	= CumulH / CumulAB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.SUM NOOBS;
+	FORMAT	CurrentAVG	5.3;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.3.4   |
+* ----------------------------- *
+	The 'WORK.Hypertension' data set (created in Check 3.3.3) contains an indicator
+		variable named 'HypInd' with a value of 1 for each SBP values of 140 or greater
+
+	Task:  Create an accumulating variable named 'HtnValueCount' which accumulates
+			the number of time a SBP value was hypertensive
+			(i.e. it will accumulate the 'HypInd' variable) *;
+DATA WORK.HypTotal;
+	SET	WORK.Hypertension;
+	[enter sum statement here];
+	RUN;
+
+PROC PRINT DATA = WORK.HypTotal;
+	VAR	SSN VisitDt SBP HypInd HtnValueCount;
+	RUN;
+
+
+
+
+*	SECTION 3.3.5 - FIRST. AND LAST. AUTOMATIC VARIABLES   *; RUN;
+
+*	When a BY statement is used in the DATA step, the following additional
+		automatic variables are	created in the PDV (i.e. not in the output data set):
+		1) FIRST.by-variable
+		2) LAST.by-variable
+
+	FIRST.by-variable is an indicator variable for the first instance of each BY-variable's value
+	LAST.by-variable is an indicator variable for the last instance of each BY-variable's value
+
+	The data set should already be ordered by the variable(s) specified in the BY statement   *;
+
+
+*	Illustration 1 - Showing FIRST. and LAST. Automatic Variables   *; RUN;
+
+*	FIRST.SubjID is 1 for the first observation from each distinct subject (and 0 otherwise)
+	LAST.SubjID is 1 for the last observation from each distinct subject (and 0 otherwise)   *;
+DATA	WORK.Illus;
+	SET	CanImpt.AELog	(	KEEP	=	SubjID );
+	BY	SubjID;
+	PUTLOG	_ALL_;
+	RUN;
+
+
+*	Illustration 2 - Using FIRST. and LAST. Automatic Variables   *; RUN;
+
+*	Goal:  Total up the number of adverse events by subject
+
+	A sensible strategy will utilize the following 3 steps:
+		1) Set a counter variable to 0 at the start of each subject's data
+		2) Accumulate the desired value across all observations for that subject
+		3) Keep just the final observation for each subject   *;
+DATA	WORK.Illus;
+	SET	CanImpt.AELog	(	KEEP	=	SubjID );
+	BY	SubjID; * This creates FIRST.SubjID and LAST.SubjID *;
+
+	IF	FIRST.SubjID	= 1	THEN	AECount	= 0; * Step 1 *;
+
+	AECount + 1; * Step 2 *;
+
+	IF	LAST.SubjID	= 1; * Step 3 *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Using FIRST. and LAST. Automatic Variables (Again)   *; RUN;
+
+*	Creating game data for 3 players   *;
+DATA	WORK.GameData;
+	INFILE	DATALINES;
+	INPUT	Player $
+			H
+			AB		;
+	DATALINES;
+Hank 3 3
+Hank 1 4
+Hank 2 5
+Hank 1 4
+Mel  1 2
+Mel  0 4
+Mel  2 3
+Yogi 0 4
+Yogi 2 3
+Yogi 1 3
+Yogi 0 2
+Yogi 3 4
+Yogi 0 3
+;
+
+PROC PRINT DATA = WORK.GameData;
+	RUN;
+
+*	Goal:  Accumulate the number of games played, hits, at-bats, and calculate the
+			batting average for each player   *;
+DATA WORK.Illus;
+	SET WORK.GameData;
+	BY	Player;
+
+	* Step 1: Reset all accumulating variables at the start of each player's data *;
+	IF FIRST.Player = 1 THEN DO;
+			Games = 0;
+			Hits = 0;
+			AtBats = 0;
+		END;
+
+	* Step 2: Accumulate the desired variables *;
+	Games + 1;
+	Hits + H;
+	AtBats + AB;
+	AVG = Hits / AtBats;
+	FORMAT AVG 4.3;
+
+	* Step 3: Keep the final observation for each player *;
+	IF LAST.Player = 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR Player Games Hits AtBats AVG;
+	RUN;
+
+
+
+
+*	SECTION 3.3.6 - VARIABLE LIST SHORTCUTS   *; RUN;
+
+*	Several shortcuts are available which may be used to reference a set of variables
+		(to obviate the need to type the entire list of variables)   *;
+
+
+*	Illustration 1 - Using Numbered Range Lists   *; RUN;
+
+*	Numbered ranges may be used for variables which
+		1) Start with the same prefix and
+		2) End with consecutive numbers
+	A numbered range uses a single dash to invoke the shortcut   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	SubjID
+			Wk1 - Wk10; * This is a shortcut for Wk1 Wk2 Wk3 Wk4 Wk5 Wk6 Wk7 Wk8 Wk9 Wk10 *;
+	DATALINES;
+101 5 5 4 5 3 2 5 4 4 5
+102 3 . 5 4 3 5 4 5 5 5
+;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR	SubjID Wk2 - Wk8; * A subset may be specified - consecutive values will be displayed *;
+	RUN;
+
+
+*	Illustration 2 - Using Name Range Lists   *; RUN;
+
+*	Name ranges use the physical order of the variables in the data set
+	All variables from the first variable specified through the last specified will be included
+	Use 2 consecutive dashes to invoke the shortcut   *;
+PROC PRINT DATA = CanImpt.Address;
+	VAR	Last -- HOME;
+	RUN;
+
+*	Name ranges may be restricted to only the numeric variables in the range
+	Insert the word 'NUMERIC' between the consecutive dashes to invoke the numeric name range list   *;
+PROC PRINT DATA = CanImpt.Address;
+	VAR	Last -NUMERIC- HOME;
+	RUN;
+
+*	Name ranges may be restricted to only the character variables in the range
+	Insert the word 'CHARACTER' between the consecutive dashes to invoke the character name range list   *;
+PROC PRINT DATA = CanImpt.Address;
+	VAR	Last -CHARACTER- HOME;
+	RUN;
+
+
+*	Illustration 3 - Using Name Prefix Lists   *; RUN;
+
+*	Name prefix lists involve all variables starting with the same prefix
+	Use the prefix followed by a colon to invoke the shortcut   *;
+PROC PRINT DATA = CanImpt.Laboratory_2015;
+	VAR	Lab:; * This will print all variables starting with the prefix 'Lab' *;
+	RUN;
+
+PROC PRINT DATA = CanImpt.Scans;
+	VAR	S:; * This prints all variables starting with the letter 'S' *;
+	RUN;
+
+
+*	Illustration 4 - Using SAS Keyword Lists    *; RUN;
+
+*	SAS keywords available are:  _NUMERIC_, _CHARACTER_, and _ALL_, where:
+	1)	_NUMERIC_ processes all numeric variables in the data set
+	2)	_CHARACTER_ processes all character variables in the data set
+	3)	_ALL_ processes all variables in the data set		*;
+PROC PRINT	DATA = CanImpt.AELog;
+	VAR	_NUMERIC_;
+	RUN;
+
+PROC PRINT	DATA = CanImpt.AELog;
+	VAR	_CHARACTER_;
+	RUN;
+
+
+
+
+*	SECTION 3.3.7 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - Numeric Constants in Non-Standard Form    *; RUN;
+
+*	Non-Standard data can be converted to a numeric value using the INPUT function
+	Remember SAS needs instructions (i.e. informats) to correctly interpret non-standard data!   *;
+DATA	WORK.Illus;
+	Savings		= INPUT('$525.75', DOLLAR7.);
+	MilesToMoon	= INPUT('238,900', COMMA7.);
+	RUN;
+
+
+*	Illustration 2 - Another Way to Create Date Constants   *; RUN;
+
+DATA	WORK.Illus;
+	USIndepDay	= INPUT('07/04/1776', MMDDYY10.); * Using an informat *;
+	FORMAT	USIndepDay	WORDDATE32.;
+	RUN;
+
+*	Note:  DateTime values are number of seconds since 12:00:00 AM on Janurary 1, 1960 *;
+DATA	WORK.Illus;
+	DaughterBirth	= INPUT('01JAN1960:00:01:30', DATETIME18.); * Using an informat *;
+	RUN;
+
+
+*	Illustration 3 - Overwriting Variables   *; RUN;
+
+*	Recall: ElecYr and President will only appear once in the PDV!
+	Therefore, values for 'ElecYr' and 'President' will be overwritten
+	To create 3 observations, the OUTPUT statement is needed!
+	You'll learn about OUTPUT statements in Chapter 3.5!   *;
+DATA	WORK.Illus;
+	LENGTH	ElecYr 8	President $ 17;
+	ElecYr	= 1976;	President	= 'Jimmy Carter';		OUTPUT;
+	ElecYr	= 1980;	President	= 'Ronald Reagan';		OUTPUT;
+	ElecYr	= 1988;	President	= 'George H. W. Bush';	OUTPUT;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Using SELECT/WHEN Statements   *; RUN;
+
+*	SELECT/WHEN syntax is an alternative to using IF/THEN/ELSE statements   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	SELECT	(RACE);
+		WHEN	('CAUCASIAN')			RaceCd	= 1;
+		WHEN	('AFRICAN AMERICAN')	RaceCd	= 2;
+		WHEN	('ASIAN')				RaceCd	= 3;
+	END;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	ID	ID;
+	VAR	RACE RaceCd;
+	RUN;
+
+
+*	Illustration 5 - Using the RETAIN Statement   *; RUN;
+
+*	When there are no missing values, the RETAIN statement may be used to
+		accumulate variables (same goal as in Section 3.3.4)  *;
+DATA	WORK.Illus;
+	SET	WORK.GameData;
+	RETAIN	CumulAB CumulH 0;
+
+	CumulH	= H + CumulH;
+	CumulAB = AB + CumulAB;
+	CurrentAVG	= CumulH / CumulAB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	CurrentAVG	5.3;
+	RUN;
+
+*	However, when there are missing values, realize that arithmetic performed using
+		missing values will produce missing values   *; 
+DATA	WORK.RETAIN;
+	SET	WORK.GameMiss;
+	RETAIN	CumulAB CumulH 0;
+
+	CumulH	= H + CumulH;
+	CumulAB = AB + CumulAB;
+	CurrentAVG	= CumulH / CumulAB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.RETAIN;
+	FORMAT	CurrentAVG	5.3;
+	RUN;
+
+*	This could be fixed by using the SUM function (Chapter 3.4!)   *;
+
+
+*	Illustration 6 - Multiple FIRST. and LAST. Automatic Variables   *; RUN;
+
+*	Creating example data   *;
+DATA	WORK.Outcomes;
+	INFILE	DATALINES;
+	INPUT	TxGrp	$	1-7
+			SexCd	$
+			SubjID
+			Outcome	;
+	DATALINES;
+Drug A  F 101 27
+Drug A  F 102 30
+Drug A  M 103 22
+Drug A  M 104 31
+Placebo F 201 15
+Placebo M 202 20
+Placebo M 203 16
+Placebo M 204 23
+;
+
+*	This BY statement has 2 variables (TxGrp and SexCd)
+	FIRST. and LAST. variables will be created for each variable!
+	Note that the FIRST. and LAST. variables for SexCd are nested within TxGrp   *;
+DATA	WORK.Illus;
+	SET	WORK.Outcomes;
+	BY	TxGrp SexCd;
+	PUTLOG	TxGrp= FIRST.TxGrp= LAST.TxGrp= SexCd= FIRST.SexCd= LAST.SexCd=;
+	RUN;
+
+
+
+
+*	SECTION 3.3.8 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.3.3   |
+* ----------------------------- *
+	The 'HypImpt.Vit_IA' data set contains systolic blood pressure data (SBP)
+	SBP values of 140 or greater are considered as hypertensive
+
+	Task:  Create a dummy variable named 'HypInd' indicating all hypertensive SBP values
+			(i.e. 'HypInd' will have values of 1 of SBP is at least 140, and 0 otherwise) *;
+DATA WORK.Hypertension;
+	SET	HypImpt.Vit_IA;
+	HypInd = (SBP >= 140);
+	RUN;
+
+PROC PRINT DATA = WORK.Hypertension;
+	VAR	SSN VisitDt SBP HypInd;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.3.4   |
+* ----------------------------- *
+	The 'WORK.Hypertension' data set (created in Check 3.3.3) contains an indicator
+		variable named 'HypInd' with a value of 1 for each SBP values of 140 or greater
+
+	Task:  Create an accumulating variable named 'HtnValueCount' which accumulates
+			the number of time a SBP value was hypertensive
+			(i.e. it will accumulate the 'HypInd' variable) *;
+DATA WORK.HypTotal;
+	SET	WORK.Hypertension;
+	HtnValueCount + HypInd;
+	RUN;
+
+PROC PRINT DATA = WORK.HypTotal;
+	VAR	SSN VisitDt SBP HypInd HtnValueCount;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
