@@ -1,0 +1,617 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	5.4 - SAS Macros.sas                                                    *
+*	PURPOSE:	Illustrate material in Chapter 5.4                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-11-27																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-13  SMN Added TOC & Comprehension Checks                        *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 5.4.0 - Macro Basics                                                    *
+*   	Section 5.4.1 - Macro Variables                                                 *
+*   	Section 5.4.2 - Macro Programs                                                  *
+*   	Section 5.4.3 - Macro System Options                                            *
+*   	Section 5.4.4 - Additional Material                                             *
+*   	Section 5.4.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanTabs	"&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME CanAnl	"&CourseRoot/Cancer RCT/Data/4_Analysis";
+LIBNAME HypTabs	"&CourseRoot/Hypertension Study/Data/3_Tabulations";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 5.4.0 - MACRO BASICS   *; RUN;
+
+*	One component of Base SAS is the Macro Facility
+	The Macro Facility is a facility that supports text substitution of SAS code
+	The Macro Facility processes both macro variables and macro programs   *;
+
+
+
+
+*	SECTION 5.4.1 - MACRO VARIABLES   *; RUN;
+
+*	A SAS macro variable contains a single text value
+		Note:  The values are character even if the characters are numeric digits
+	A macro variable is referenced using the ampersand (&) symbol immediately prior to the variable name
+
+	There are 2 types of macro variables:
+		1)	Automatic macro variables (created automatically by SAS)
+		2)	User-defined macro variables (created by the user)
+
+	Macro variables and their values are stored in memory in what is referred
+		to as a Symbol Table
+
+	The values of macro variables may be viewed in the log by submitting a %PUT statement
+		e.g. /* %PUT &MacVbl; */
+
+	The name of the variable will be included when inserting an = sign
+		e.g. /* %PUT &=MacVbl; */   *;
+
+
+*	Illustration 1 - Automatic SAS Macro Variables   *; RUN;
+
+*	The SAS macro processor automatically creates a set of macro variables
+	Some automatic variables related to dates include:   *;
+%PUT	&=SYSDAY &=SYSDATE &=SYSDATE9;
+
+*	Some automatic variables related to the operating system and SAS include:   *;
+%PUT	&=SYSSCP &=SYSSCPL &=SYSVER;
+
+*	Viewing all automatic macro variables   *;
+%PUT	_AUTOMATIC_;
+
+
+*	Illustration 2 - Using Automatic SAS Macro Variables   *; RUN;
+
+*	Some programming efficiency is gained when using automatic macro variables
+		as it obviates the need to hard-code values   *;
+TITLE1		"Report Produced on &SYSDATE9";
+FOOTNOTE1	"This report was created using SAS &SYSVER on a &SYSSCP computer with a &SYSSCPL operating system.";
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+TITLE;
+FOOTNOTE;
+
+
+*	Illustration 3 - Creating a Macro Variable   *; RUN;
+
+*	The %LET statement is used to create a macro variable
+
+	Goal:  Create the following macro variables:
+			'SexValue' which contains the value 'F', and
+			'AgeCutoff' which contains the value '60'   *;
+%LET SexValue = F;
+%LET AgeCutoff = 60;
+
+
+*	Illustration 4 - Checking the Values of Macro Variables   *; RUN;
+
+%PUT &=SexValue &=AgeCutoff;
+
+*	The _USER_ argument may be used to display all user-defined macro variables   *;
+%PUT _USER_;
+
+*	All macro variables (automatic and user-defined) may be viewd by:   *;
+%PUT _ALL_;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.4.1   |
+* ----------------------------- *
+	Task:	1)	Create a macro variable named 'Variable' and assign a value
+				of 'EthRaceCd' to it
+			2)	Check the value of the macro variable using a %PUT statement   *;
+%LET ...			;
+%PUT ...			;
+
+
+*	Illustration 5 - Using Macro Variables for Text Substitution   *; RUN;
+
+*	Goal:  Display all observations from subjects older than 60   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	AgeAtEnroll > &AgeCutoff; * Equivalent to: WHERE AgeAtEnroll > 60;
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+
+
+*	Illustration 6 - Including a Macro Variable in a Name Literal   *; RUN;
+
+*	Recall:  Character values must be quoted to reference them
+	Goal:  Display observations for female subjects   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	SexCd = "F"; * The F must be quoted because it's a character value *;
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+
+*	Double quotation marks allow the macro variable reference to be resolved   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	SexCd = "&SexValue"; * Equivalent to: WHERE SexCd = "F";
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+
+*	Single quotation marks prevent the macro variable from being resolved
+		SAS is actually looking for a value of '&SexValue', which doesn't exist   *;
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	SexCd = '&SexValue';
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+
+
+*	Illustration 7 - Quotation Rules Apply to All Name Literals   *; RUN;
+
+*	Double quotation marks allow the macro variable reference to be resolved   *;
+TITLE1	"Subjects Older than &AgeCutoff";
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	AgeAtEnroll > &AgeCutoff;
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+TITLE;
+
+*	Single quotation marks prevent the macro variable from being resolved   *;
+TITLE1	'Subjects Older than &AgeCutoff';
+PROC PRINT DATA = CanAnl.CanAnalysis1;
+	WHERE	AgeAtEnroll > &AgeCutoff;
+	VAR	SubjID LesionRatio SexCd AgeAtEnroll;
+	RUN; 
+TITLE;
+
+
+*	Illustration 8 - Combining Macro Variables with Text   *; RUN;
+
+*	A period may be used to explicitly denote the end of a macro variable
+	A period is not needed when the macro variable name is followed by a delimiting character
+
+	Goal:  Create a data set named 'GenderF'
+	This also illustrates that a macro variable may be used in other areas (e.g. a data set name)   *;
+DATA	WORK.Gender&SexValue;
+	SET	CanAnl.CanAnalysis1;
+	WHERE	SexCd = "&SexValue";
+	RUN;
+
+PROC PRINT DATA = WORK.Gender&SexValue;
+	RUN;
+
+*	Goal:  Create a data set named 'FGender'
+	NB:  Without the period, SAS would look for a macro variable named 'SexValueGender'!   *;
+DATA	WORK.&SexValue.Gender;
+	SET	CanAnl.CanAnalysis1;
+	WHERE	SexCd = "&SexValue";
+	RUN;
+
+PROC PRINT DATA = WORK.&SexValue.Gender;
+	RUN;
+
+
+*	Illustration 9 - Using Macro Variables to Reduce Maintenance   *; RUN;
+
+*	Task:  For each lab test, create a report containing the following:
+		1)	A statistical summary containing the Mean, SD, extremes and quartiles
+		2)	The top 10 values
+
+	Approach 1:
+		Step 1:	Write the following code for the 'White Blood Cell Count' lab test
+		Step 2: Cut-and-paste the code and then replace text for other lab tests   *;
+
+DATA WORK.WBC;
+	SET	CanTabs.Labs;
+	WHERE	LabTest = "White Blood Cell Count";
+	RUN;
+
+TITLE1 "Statistical Summary for:  White Blood Cell Count";
+PROC MEANS
+		DATA = WORK.WBC
+		MAXDEC = 1
+		N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX;
+	VAR	LabVal;
+	RUN;
+
+PROC SORT DATA = WORK.WBC;
+	BY	DESCENDING	LabVal;
+	RUN;
+
+TITLE1 "The 10 Highest Values for:  White Blood Cell Count";
+PROC PRINT DATA = WORK.WBC (OBS = 10);
+	RUN;
+TITLE;
+
+
+*	Approach 2:
+	Step 1:	Write the program using macro variables for values of:
+				1)	Data set name	(I'll name this macro variable 'DSNm')
+				2)	Lab test		(I'll name this macro variable 'Test')
+	Step 2: Simply change the macro variables values and re-run the steps   *;
+
+%LET	DSNm = RBC;
+%LET	Test = Red Blood Cell Count;
+
+*	Note:  Nothing in the following (4) steps needs to be changed!   *;
+DATA WORK.&DSNm;
+	SET	CanTabs.Labs;
+	WHERE	LabTest = "&Test";
+	RUN;
+
+TITLE1 "Statistical Summary for:  &Test";
+PROC MEANS
+		DATA = WORK.&DSNm
+		MAXDEC = 1
+		N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX;
+	VAR	LabVal;
+	RUN;
+
+PROC SORT DATA = WORK.&DSNm;
+	BY	DESCENDING	LabVal;
+	RUN;
+
+TITLE1 "The 10 Highest Values for:  &Test";
+PROC PRINT DATA = WORK.&DSNm (OBS = 10);
+	RUN;
+TITLE;
+
+
+*	Illustration 10 - Creating a Macro Variable Using CALL SYMPUTX    *; RUN;
+
+*	CALL SYMPUTX assigns a value to a macro variable inside a DATA step
+	This allows us to pass a value from a variable which could be based on a calculation
+		to a macro variable - a step towards dynamic programming!
+
+	Goal:  Print a report of the highest P% of values from a numeric variable
+
+	Step 1:	Use PROC MEANS to find the Pth percentile (export this to a data set)
+	Step 2:	Use CALL SYMPUTX to create a variable whose value is the Pth percentile
+	Step 3:	Sort the data by the given variable in descending order
+	Step 4: Create a report of the highest P% of values   *;
+
+*	Specify the desired data set, variable, and percentile   *;
+%LET DSNm = CanAnl.CanAnalysis1;
+%LET Vbl  = AgeAtEnroll;
+%LET Pctl = 80;
+
+*	Step 1:  Use PROC MEANS to find the Pth percentile
+				Note that we're creating the 'WORK.PctlResults' data set with the result   *;
+ODS	OUTPUT	Summary = WORK.PctlResults;
+PROC MEANS
+		DATA = &DSNm
+		P&Pctl	;
+	VAR	&Vbl;
+	RUN;
+
+*	Step 2:	 Use CALL SYMPUTX to create a variable whose value is the Pth percentile
+				This is creating a macro variable named 'Cutoff' with the value from above!   *;
+DATA _NULL_;
+	SET	WORK.PctlResults;
+	CALL SYMPUTX("Cutoff", &Vbl._P&Pctl.);
+	RUN;
+
+*	Check that the value is now assigned to the macro variable named 'Cutoff'   *;
+%PUT &=Cutoff;
+
+*	Step 3:	 Sort the data by the given variable in descending order   *;
+PROC SORT
+		DATA = &DSNm.
+		OUT	= WORK.HighestObs;
+	BY	DESCENDING	&Vbl.;
+	RUN;
+
+*	Step 4:  Create a report of the highest P% of values   *;
+TITLE	"Top %SYSEVALF(100-&Pctl)% of Values of the Variable '&Vbl.' from Data Set '&DSNm'";
+PROC PRINT DATA = WORK.HighestObs LABEL;
+*	VAR	&Vbl.;
+	WHERE	&Vbl. >= &Cutoff.;
+	RUN;
+TITLE;
+
+*	Repeat for a different scenario, e.g.:   *;
+%LET DSNm = HypTabs.Vitals;
+%LET Vbl  = SBP;
+%LET Pctl = 99;
+
+
+
+
+*	SECTION 5.4.2 - MACRO PROGRAMS   *; RUN;
+
+
+*	Illustration 1 - How to Write a Macro Program   *; RUN;
+
+*	Sandwich the desired SAS code between %MACRO and %MEND statements
+	The macro program name is specified in the %MACRO statement
+	Use the % symbol followed by the macro name to invoke a macro program
+
+	Goal:	Write a macro program to produce the report above for white blood cell counts   *;
+%MACRO	SummarizeWBCs;
+
+DATA WORK.WBC;
+	SET	CanTabs.Labs;
+	WHERE	LabTest = "White Blood Cell Count";
+	RUN;
+
+TITLE1 "Statistical Summary for:  White Blood Cell Count";
+PROC MEANS
+		DATA = WORK.WBC
+		MAXDEC = 1
+		N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX;
+	VAR	LabVal;
+	RUN;
+
+PROC SORT DATA = WORK.WBC;
+	BY	DESCENDING	LabVal;
+	RUN;
+
+TITLE1 "The 10 Highest Values for:  White Blood Cell Count";
+PROC PRINT DATA = WORK.WBC (OBS = 10);
+	RUN;
+TITLE;
+
+%MEND	SummarizeWBCs;
+
+*	Now, run the macro program!   *;
+%SummarizeWBCs
+
+*	Note:  Although this macro works, this macro:
+			1)	Was less efficient than simply writing the 4 steps, and 
+			2)	Can only be used for a single scenario (not helpful)   *;
+
+
+*	Illustration 2 - Adding Parameters to a Macro Program   *; RUN;
+
+*	Parameters are macro variables whose values are set when the macro program is invoked
+	Adding parameters incorporates flexibility and greatly expands the macro's
+		usefulness!
+
+	Goal:  Add parameters named 'DSNm' and 'Test' to the macro   *;
+
+%MACRO	SummarizeLabs	(DSNm = , Test = );
+
+DATA WORK.&DSNm;
+	SET	CanTabs.Labs;
+	WHERE	LabTest = "&Test";
+	RUN;
+
+TITLE1 "Statistical Summary for:  &Test";
+PROC MEANS
+		DATA = WORK.&DSNm
+		MAXDEC = 1
+		N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX;
+	VAR	LabVal;
+	RUN;
+
+PROC SORT DATA = WORK.&DSNm;
+	BY	DESCENDING	LabVal;
+	RUN;
+
+TITLE1 "The 10 Highest Values for:  &Test";
+PROC PRINT DATA = WORK.&DSNm (OBS = 10);
+	RUN;
+TITLE;
+
+%MEND	SummarizeLabs;
+
+*	Run the report for all 4 lab tests   *;
+%SummarizeLabs (DSNm = WBC, Test = White Blood Cell Count)
+%SummarizeLabs (DSNm = RBC, Test = Red Blood Cell Count)
+%SummarizeLabs (DSNm = HCT, Test = Hematocrit)
+%SummarizeLabs (DSNm = HGB, Test = Hemoglobin)
+
+;*	The MCOMPILENOTE=ALL option will write a note to the log window if the
+		macro compiles successfully
+	Submit the option and re-compile the macro program   *;
+OPTIONS MCOMPILENOTE=ALL;
+
+
+;*	Illustration 3 - Including Default Parameter Values   *; RUN;
+
+*	Parameter specifications in the macro definition are implemented by default.  Therefore,
+		1)	If no value is specified, the default is used
+		2)	If value(s) are provided, then those specified values are used
+	
+	Macro variables with default values specified don't have to be specified in the macro call
+
+	Goal:  Create a report which displays by default:
+		1)	The statistics N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX
+		2)	All variables
+		3)	The highest 10 observations
+	but allows these specifications to be changed   *;
+
+%MACRO	SummarizeLabs2	(	DSNm = , Test = , Stats = N MEAN STDDEV MIN Q1 MEDIAN Q3 MAX,
+							VblList = _ALL_, NObs = 10 );
+
+DATA WORK.&DSNm;
+	SET	CanTabs.Labs;
+	WHERE	LabTest = "&Test";
+	RUN;
+
+TITLE1 "Statistical Summary for:  &Test";
+PROC MEANS
+		DATA = WORK.&DSNm
+		MAXDEC = 1
+		&Stats;
+	VAR	LabVal;
+	RUN;
+
+PROC SORT DATA = WORK.&DSNm;
+	BY	DESCENDING	LabVal;
+	RUN;
+
+TITLE1 "The 10 Highest Values for:  &Test";
+PROC PRINT DATA = WORK.&DSNm (OBS = &NObs);
+	VAR	&VblList;
+	RUN;
+TITLE;
+
+%MEND	SummarizeLabs2;
+
+%SummarizeLabs2 (DSNm = RBC, Test = Red Blood Cell Count, Stats = P10 P90)
+%SummarizeLabs2 (DSNm = HCT, Test = Hematocrit, NObs = 5)
+%SummarizeLabs2 (DSNm = HGB, Test = Hemoglobin, Stats = P10 P90, NObs = 4, VblList = SubjID LabVal)
+
+
+;*	Illustration 4 - Creating a Macro to Generate Frequencies of Any Character Variable from Any Data Set    *; RUN;
+
+*	This macro will:
+		1)	Generate frequency counts and percentages
+		2)	For any variable
+		3)	From any data set   *;
+%MACRO	FreqResults (Num = , SourceDSNm = , VblNm = );
+
+ODS OUTPUT	OneWayFreqs = WORK.Vbl&Num (DROP = Table &VblNm);
+PROC FREQ DATA = &SourceDSNm;
+	TABLES	&VblNm;
+	RUN;
+
+DATA	WORK.Vbl&Num;
+
+	RETAIN	VblNum;
+
+	LENGTH	DataSet	Variable $ 30;
+
+	SET	WORK.Vbl&Num;
+
+	VblNum	= &Num;
+	DataSet = "&SourceDSNm";
+	Variable = "&VblNm";
+
+	RENAME	F_&VblNm = Level;
+
+	RUN;
+
+%MEND	FreqResults;
+
+%FreqResults (Num = 1, SourceDSNm = CanAnl.CanAnalysis1, VblNm = TxNm)
+%FreqResults (Num = 2, SourceDSNm = CanAnl.CanAnalysis1, VblNm = SexCd)
+%FreqResults (Num = 3, SourceDSNm = CanAnl.CanAnalysis1, VblNm = RaceCd)
+%FreqResults (Num = 4, SourceDSNm = CanAnl.CanAnalysis1, VblNm = MaxGrade)
+
+;*	Concatenating the data sets containing the individual results   *;
+DATA	WORK.AllSummaries;
+	SET	WORK.Vbl:;
+	RUN;
+
+PROC SORT DATA = WORK.AllSummaries;
+	BY	Variable;
+	RUN;
+
+TITLE1 "Frequency Results for: '#BYVAL(Variable)'";
+PROC PRINT DATA = WORK.AllSummaries;
+	BY	Variable;
+	PAGEBY Variable;
+	ID	Variable;
+	VAR	Level Frequency Percent;
+	RUN;
+TITLE;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.4.2   |
+* ----------------------------- *
+	Task:  Use the 'FreqResults' macro to generate a frequency table for the
+			variable named 'Team' in the 'SASHelp.Baseball' data set
+			Don't use the 'Num' parameter and check the name of the data set
+				that appears in the 'WORK' library   *;
+%FreqResults ...
+
+
+
+
+;*	SECTION 5.4.3 - MACRO SYSTEM OPTIONS   *; RUN;
+
+
+*	Illustration 1 - The SYMBOLGEN option   *; RUN;
+
+*	SYMBOLGEN displays the value of a macro variable in the SAS code that is processed   *;
+OPTIONS	SYMBOLGEN;
+
+%SummarizeLabs2 (DSNm = HGB, Test = Hemoglobin, Stats = P10 P90, NObs = 4, VblList = SubjID LabVal)
+
+OPTIONS	NOSYMBOLGEN; * Turns off the SYMBOLGEN option *;
+
+
+;*	Illustration 2 - The MPRINT option   *; RUN;
+
+*	MPRINT displays the SAS code generated by the macro in the log   *;
+OPTIONS	MPRINT;
+
+%SummarizeLabs2 (DSNm = HGB, Test = Hemoglobin, Stats = P10 P90, NObs = 4, VblList = SubjID LabVal)
+
+OPTIONS	NOMPRINT; * Turns off the MPRINT option *;
+
+
+;*	Illustration 3 - The MLOGIC option   *; RUN;
+
+*	MLOGIC causes SAS to print details in the log about the execution of the macro   *;
+OPTIONS	MLOGIC;
+
+%SummarizeLabs2 (DSNm = HGB, Test = Hemoglobin, Stats = P10 P90, NObs = 4, VblList = SubjID LabVal)
+
+OPTIONS	NOMLOGIC; * Turns off the MLOGIC option *;
+
+
+*	Note:  When debugging a macro program, it can be helpful to use all 3 options together   *;
+OPTIONS	SYMBOLGEN MPRINT MLOGIC;
+%SummarizeLabs2 (DSNm = HGB, Test = Hemoglobin, Stats = P10 P90, NObs = 4, VblList = SubjID LabVal)
+
+OPTIONS NOSYMBOLGEN NOMPRINT NOMLOGIC;
+
+
+
+
+;*	SECTION 5.4.4 - ADDITIONAL MATERIAL   *; RUN;
+
+*	None   *;
+
+
+
+
+;*	SECTION 5.4.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.4.1   |
+* ----------------------------- *
+	Task:	1)	Create a macro variable named 'Variable' and assign a value
+				of 'EthRaceCd' to it
+			2)	Check the value of the macro variable using a %PUT statement   *;
+%LET Variable = EthRaceCd;
+%PUT &=Variable;
+
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES &Variable;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.4.2   |
+* ----------------------------- *
+	Task:  Use the 'FreqResults' macro to generate a frequency table for the
+			variable named 'Team' in the 'SASHelp.Baseball' data set
+			Don't use the 'Num' parameter and check the name of the data set
+				that appears in the 'WORK' library   *;
+%FreqResults (SourceDSNm = SASHelp.Baseball, VblNm = Team)
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
