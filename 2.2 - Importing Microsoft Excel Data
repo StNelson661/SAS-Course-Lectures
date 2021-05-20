@@ -1,0 +1,619 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	2.2 - Importing Microsoft Excel Data.sas                                *
+*	PURPOSE:	Illustrate material in Chapter 2.2                                      *
+*	AUTHOR:		Nelson														*
+*	CREATED:	2017-08-01																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-10  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-11  PJB Re-Structured material + minor additions                *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 2.2.0 - The VALIDVARNAME System Option                                  *
+*   	Section 2.2.1 - Determining the Necessary Specifications                        *
+*   	Section 2.2.2 - Using the LIBNAME Statement                                     *
+*   	Section 2.2.3 - Using PROC IMPORT                                               *
+*   	Section 2.2.4 - Import the Microsoft Excel Data for the Cancer RCT              *
+*   	Section 2.2.5 - Importing Database Data                                         *
+*   	Section 2.2.6 - Exporting Data to Microsoft Excel                               *
+*   	Section 2.2.7 - Additional Material                                             *
+*   	Section 2.2.8 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanSrc  "&CourseRoot/Cancer RCT/Data/1_source";
+
+
+
+
+*	SECTION 2.2.0 - THE VALIDVARNAME SYSTEM OPTION   *; RUN;
+
+*	The setting of the VALIDVARNAME system option determines whether spaces or special
+		characters are permitted in variable names
+	Generally, it will be easier if special characters are not permitted in variable names   *;
+
+
+*	Illustration 1 - Check the Value of the VALIDVARNAME System Option   *;
+
+*	Submit the PROC step and check the log window   *;
+PROC OPTIONS	OPTION = VALIDVARNAME;
+	RUN;
+
+
+*	Illustration 2 - Setting the VALIDVARNAME System Option   *;
+
+*	Submit the OPTIONS statement to set the specification of VALIDVARNAME to V7   *;
+OPTIONS	VALIDVARNAME = V7;
+
+
+
+
+*	SECTION 2.2.1 - DETERMINING THE NECESSARY SPECIFICATIONS   *; RUN;
+
+*	SAS can access data in a Microsoft Excel workbook by using a LIBNAME statement
+		and specifying an appropriate "engine"
+
+	An engine is a component of SAS software that reads from or writes to a file
+	Each engine enables SAS to access files that are in a particular format
+
+	SAS has developed a few different engines to facilitate SAS reading Excel data as SAS data
+		The engine to be used is specified in the LIBNAME statement, using the following syntax:
+			LIBNAME libref engine-name "path/filename.extension" <OPTIONS>;
+*		"EXCEL" is the default engine for a Windows operating system when the
+			bitness of SAS and MS Excel match
+		My (Jud's) computer (Windows OS) and Excel are both 64-bit (i.e. they match), so the EXCEL
+			engine is used when none is specified - this can be seen in the log window!   ;
+
+*	Note:  If using a client application (e.g. SAS Studio) to access SAS on a remote server,
+		Interface to PC Files is not useable
+
+	Whether or not an engine will access the Excel data depends on 5 factors:
+		1)	Operating Environment on Which SAS Is Running
+		2)	SAS Version
+		3)	SAS Bitness
+		4)	Excel Bitness
+		5)	Excel File Extension
+
+
+*	Illustration 1 - Checking the Operating Environment on Which SAS Is Running   *; RUN;
+
+*	Note:  For SAS University Edition users, this will be the operating
+			environment	of Oracle's Virtual Box (or, alternatively, of VMWare if using it),
+			not of the actual computer
+	The operating environment may be checked in a few ways:
+
+	1)	SAS University Edition and SAS OnDemand for Academics Users:
+			Click on Help (the Question Mark) -> About SAS Studio
+			Look at the "SAS platform" information
+		Windowing Environment Users:  Click on Help -> About SAS 9
+			Look at the "Operating System Information"
+
+	2)	Submit the following statement and check the log   *;
+		%PUT &=SYSSCP;
+		*	"WIN" indicates that SAS is operating in a Windows environment
+			"LIN" indicates that SAS is operating in a Linux environment
+
+	3)	Submit the following PROC and check the log   *;
+		PROC SETINIT;
+			RUN;
+		*	Around the 8th line shows "Operating System: ______"   *;
+
+
+*	Illustration 2 - Determining the SAS Version   *; RUN;
+
+*	The version of SAS you are working with may be checked in a few ways:
+
+	1)	SAS University Edition and SAS OnDemand for Academics Users:
+			Click on Help (the Question Mark) -> About SAS Studio
+			Look at the "SAS release" information
+		Windowing Environment Users:  Click on Help -> About SAS 9
+			Look at the "Software Information"
+
+	2)	Submit the following statement and check the log   *;
+		%PUT &=SYSVLONG4;
+
+*	3)	Submit the following PROC and check the log
+			Look at the line with "For BASE SAS Software ... *;
+		PROC PRODUCT_STATUS;
+			RUN;
+
+
+*	Illustration 3 - Determining the SAS Bitness   *; RUN;
+
+*	The bitness of SAS may be checked in a few ways:
+
+	1)	SAS University Edition and SAS OnDemand for Academics Users:
+			Click on Help (the Question Mark) -> About SAS Studio
+			Look at the "SAS platform" information
+		Windowing Environment Users:  Click on Help -> About SAS 9
+			Look at the "Software Information"
+
+	2)	Submit the following statement and check the log   *;
+		%PUT &=SYSADDRBITS;
+		*	The display should either be 64 or 32
+
+	3)	Submit the following PROC and check the log   *;
+		PROC SETINIT;
+			RUN;
+		*	Around the 8th line shows "Operating System: ______"
+			Check whether there is a "64" or "32" in the operating system code   *;
+
+
+*	Illustration 4 - Determining the Excel Bitness   *; RUN;
+
+*	The bitness of Excel may be checked by opening Excel
+		Click on File -> Account -> About Excel
+		The top line should indicate the whether a 32-bit or 64-bit version of Excel is installed
+
+	For Mac users ...
+		Click on 'Excel' in the top ribbon, then 'About Excel'
+		If the version is 15.24 or greater, you have 64-bit Excel
+		If the version is less than 15.24, you have 32-bit Excel   *;
+
+
+*	Illustration 5 - Determining the Excel File Extension   *; RUN;
+
+*	Look at it!
+	It will either be a .xlsx or .xls file extension
+	Note:  a .csv file extension is not an Excel file (you can simply use Excel to view the data)   *;
+
+
+
+
+*	SECTION 2.2.2 - USING THE LIBNAME STATEMENT   *; RUN;
+
+*	When importing/reading a .xlsx file, using the LIBNAME statement is a great option
+		as it allows for all of the features of the DATA step to be available!
+
+	Based on your specifications, you should be able to access an Excel file using one
+		or more of the XLSX, EXCEL, or PCFILES engines
+
+	1)	SAS University Edition and SAS OnDemand for Academics Users:
+		The XLSX engine should work for opening a .xlsx workbook,
+			but the PCFILES & EXCEL engines aren't supported
+
+	2)	In the SAS Windowing Environment,
+			-Libraries created using the XLSX engine will not open interactively
+			-Libraries created using the EXCEL or PCFILES engine need the system option below
+				VALIDMEMNAME = EXTEND   *;
+OPTIONS	VALIDMEMNAME = EXTEND;
+
+
+*	Illustration 1 - Accessing Excel Using an Engine in the LIBNAME Statement   *; RUN;
+
+*	Try using the XLSX engine   *;
+LIBNAME Check XLSX "&CourseRoot/Cancer RCT/Data/1_Source/Laboratory.xlsx";
+LIBNAME Check CLEAR;
+
+*	Try using the EXCEL engine   *;
+LIBNAME Check EXCEL "&CourseRoot/Cancer RCT/Data/1_Source/Laboratory.xlsx";
+LIBNAME Check CLEAR;
+
+*	Try using the PCFILES engine
+	Note:  The PC Files Server must be installed for this engine to work   *;
+LIBNAME Check PCFILES PATH="&CourseRoot/Cancer RCT/Data/1_Source/Laboratory.xlsx";
+LIBNAME Check CLEAR;
+
+
+*	Illustration 2 - Processing Data After Access is Successful   *; RUN;
+
+*	You may now work with the data as if it's a SAS data set!
+		Each worksheet appears as if it's a data set within the workbook (the library)
+
+	However, if the EXCEL or PCFILES engine was used, you must refer to the data
+		sets using a name literal for the data set name
+
+	Note:  The Excel workbook is locked when the libref is associated with the Excel workbook
+			So you must disassociate the libref to unlock the MS Excel workbook
+
+	Goal:  Create a report to programmatically browse the 'NJCC__2015' worksheet   *;
+LIBNAME Labs XLSX "&CourseRoot/Cancer RCT/Data/1_Source/Laboratory.xlsx";
+PROC PRINT
+		DATA = Labs.NJCC___2015
+		LABEL; * Note:  MS Excel column headings become variable labels *;
+	RUN;
+LIBNAME Labs CLEAR;
+*	Note:  Spaces in the MS Excel column headings become underscores in variable names
+
+	Note:  If accessing an Excel worksheet with no header, use the HEADER=NO option in
+			the LIBNAME statement   *;
+
+
+
+
+*	SECTION 2.2.3 - USING PROC IMPORT   *; RUN;
+
+*	To read a .xls file:
+	1)	SAS University Edition and SAS OnDemand for Academics Users:
+		PROC IMPORT must be used as the EXCEL and PCFILES engines aren't supported
+			and the XLSX engine is only for reading .xlsx files
+
+	2)	Windowing Environment Users:
+		You may use the EXCEL or PCFILES engine if the specifications allow
+			(again, allowing you to use the features of the DATA step)
+		PROC IMPORT may also be used
+
+	PROC IMPORT syntax:
+		PROC IMPORT
+			DATAFILE=	specifies the complete path, filename, and extension of the source file
+			OUT=		specifies the output SAS data set to be created
+			DBMS=		specifies the type of data to import
+				  Use:	XLS for .xls files (EXCEL may also be used in the Windowing Environment)
+						XLSX for .xlsx files
+						CSV for .csv files
+						DLM for delimited files (default delimiter is a space)
+							Use the DELIMITER= option to specify other delimiters
+						TAB for tab-delimited text files
+						ACCESS for Microsoft Access files
+			REPLACE		specifies to overwrite an existing file of the same name   *;						
+
+
+*	Illustration 1 - Importing MS Excel Worksheet   *; RUN;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= WORK.Labs
+		DBMS		= XLS	/* XLS can read .xls files (if closed) */
+		REPLACE		;
+	RUN;
+*	Note:  The first worksheet is imported by default   *;
+
+
+*	Illustration 2 - Specifying an Excel Worksheet   *; RUN;
+
+*	In a workbook with multiple worksheets, the first worksheet is imported by default
+	To read a later (i.e. not first) worksheet, use the SHEET= statement
+
+	Goal:  Import the labe data for patient 4   *;
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= WORK.LabsPt5
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_5';
+	RUN;
+
+
+*	Illustration 3 - Importing a Subset By Specifying a Range of Cells in the MS Excel Worksheet   *; RUN;
+
+*	By default the entire worksheet is imported
+	To import a subset of the data, use the RANGE= statement
+
+	Goal:  Import Pt, LabDate, WBC, and RBC from the first 2 rows of data   *;
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= WORK.LabsPt4_Obs1And2
+		DBMS		= XLS
+		REPLACE		;
+	RANGE		= "Pt_4$A1:D3";
+	RUN;
+*	Note:  The date is in DATE9 format, even though the source data was in MMMDDYY10 format   *;
+
+*	By default, SAS assumes the first row of data are variable names
+	If that is not the case (i.e. if the first row read is data), use the GETNAMES=NO statement
+
+	Goal:  Import Pt, LabDate, WBC, and RBC from the last 2 rows of data   *;
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= WORK.LabsPt4_Obs3And4
+		DBMS		= XLS
+		REPLACE		;
+	RANGE		= "Pt_4$A4:D5";
+	GETNAMES	= NO; * Needed since we're starting reading with an observation
+						(i.e. we're not starting by reading the header) *;
+	RUN;
+*	Note:  In the Windowing Environment, variable names are now F1, ... , F4
+		   In SAS Studio, variable names are now A, B, ..., D
+
+	Note:  If accessing an Excel worksheet with no header, use the GETNAMES=NO statement;
+
+
+
+
+*	SECTION 2.2.4 - IMPORT THE MICROSOFT EXCEL DATA FOR THE CANCER RCT   *; RUN;
+
+*	Goal:  Import the Excel data into SAS data sets
+
+	NB:  1)	You may have to change the engine depending on the specifications
+			you have for the 5 factors above!
+		 2)	If you have to change the XLSX engine, you will also need to
+			change the data set names below to SAS name literals
+				e.g. NJLabs.'NJCC___2015$'N
+
+*	Illustration 1:  Importing the Laboratory.xlsx Data Using the XLSX Engine   *; RUN;
+
+*	Goal:  Import the data from each Excel worksheet into a separate SAS data set   *;
+
+LIBNAME NJCCLabs XLSX "&CourseRoot/Cancer RCT/Data/1_Source/Laboratory.xlsx";
+
+DATA	CanImpt.Laboratory_2015;
+	SET	NJCCLabs.NJCC___2015;
+	RUN;
+
+DATA	CanImpt.Laboratory_2016;
+	SET	NJCCLabs.NJCC___2016;
+	RUN;
+
+LIBNAME NJCCLabs CLEAR;
+
+
+*	Illustration 2:  Importing the Lab Data.xls data Using PROC IMPORT   *; RUN;
+
+*	Goal:  Import the data from each Excel worksheet into a separate SAS data set   *;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= CanImpt.Lab_Data_Pt1
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_1';
+	RUN;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= CanImpt.Lab_Data_Pt2
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_2';
+	RUN;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= CanImpt.Lab_Data_Pt3
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_3';
+	RUN;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= CanImpt.Lab_Data_Pt4
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_4';
+	RUN;
+
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Lab Data.xls"
+		OUT			= CanImpt.Lab_Data_Pt5
+		DBMS		= XLS
+		REPLACE		;
+	SHEET	= 'Pt_5';
+	RUN;
+
+
+
+
+*	SECTION 2.2.5 - IMPORTING DATABASE DATA   *; RUN;
+
+*	There exists a wide variety of relational databases
+	You may use a SAS/ACCESS engine to access these databases
+
+	Look in the SAS documentation to determine which engine is needed for
+		a particular database.  For example, use:
+		ACCESS to access a Microsoft Access database
+		ORACLE to access an Oracle database, etc.
+
+	Note that additional options might need to be specified, for example:
+		USER= to specify your user name
+		PW= to specify a password, etc.
+
+	Note: Accessing MS Access files needs a process running on a Windows OS
+			As such, SAS University Edition and SAS OnDemand for Academics
+			cannot read MS Access database tables   *;
+
+
+*	Illustration 1:  Connecting to a Microsoft Access Database   *; RUN;
+
+LIBNAME AEData ACCESS "&CourseRoot/Cancer RCT/Data/1_Source/AELog.accdb";	
+
+*	Now the table(s) may be processed as if they are SAS data sets!
+	Note:  SAS name literals must be used for table names which are
+			not valid SAS names   *;
+PROC PRINT DATA = AEData.'Adverse Events'N;
+	RUN;
+
+LIBNAME	AEData	CLEAR;
+
+
+*	Illustration 2:  Importing a Microsoft Access Table Into a SAS Data Set   *; RUN;
+
+LIBNAME	AEData	ACCESS	"&CourseRoot/Cancer RCT/Data/1_Source/AELog.accdb";	
+
+DATA	CanImpt.AELog;
+	SET	AEData.'Adverse Events'N;
+	RUN;
+
+LIBNAME	AEData	CLEAR;
+
+
+*	Illustration 3:  Using PROC IMPORT to Import Database Data   *; RUN;
+
+PROC IMPORT
+		OUT			= WORK.AdvEvents 
+		DATATABLE	= "Adverse Events" 
+		DBMS		= ACCESS
+		REPLACE;
+	DATABASE	= "&CourseRoot/Cancer RCT/Data/1_Source/AELog.accdb"; 
+	SCANMEMO	= YES; * Uses the largest text size in a memo field as a SAS variable length *;
+	USEDATE		= YES; * Uses the DATE. format for a date/time field *;
+	SCANTIME	= YES; * Uses the TIME. format only if time values are found in a field *;
+	RUN;
+
+
+
+
+*	SECTION 2.2.6 - EXPORTING DATA TO MICROSOFT EXCEL   *; RUN;
+
+*	The LIBNAME statement allows us to write to an Excel workbook as if
+		it were a SAS library   *;
+
+
+*	Illustration 1:  Creating a MS Excel .xlsx Workbook with Multiple Worksheets   *; RUN;
+
+*	The XLSX engine is used
+	Based on your set-up a different engine may need to be used   *;
+LIBNAME NJExport XLSX
+	"&CourseRoot/Cancer RCT/Data/NJCC Exported Lab Data - XLSX Engine.xlsx";
+
+DATA	NJExport.NJ2015;
+	SET	CanImpt.Laboratory_2015;
+	RUN;
+
+DATA	NJExport.NJ2016;
+	SET	CanImpt.Laboratory_2016;
+	RUN;
+
+*	Note:  This step is to show the contents of the .xlsx file created   *;
+PROC CONTENTS DATA = NJExport._ALL_;
+	RUN;
+
+LIBNAME NJExport CLEAR;
+
+
+*	Illustration 2:  Creating a MS Excel .xlsx Workbook Using PROC COPY   *; RUN;
+
+*	Note:  When using PROC COPY, the data set name can't be changed
+			To change it, follow PROC COPY with PROC DATASETS (see Lecture 2.1)
+	The XLSX engine is used
+	Based on your set-up a different engine may need to be used   *;
+LIBNAME NJExport XLSX
+	"&CourseRoot/Cancer RCT/Data/NJCC Exported Lab Data - PROC COPY.xlsx";
+
+PROC COPY
+		IN	= CanImpt
+		OUT	= NJExport;
+	SELECT	Laboratory_2015 Laboratory_2016;
+	RUN;
+
+*	Note:  This step is to show the contents of the .xlsx file created   *;
+PROC CONTENTS DATA = NJExport._ALL_;
+	RUN;
+
+LIBNAME NJExport CLEAR;
+
+
+*	Illustration 3:  Exporting to Excel Using PROC EXPORT   *; RUN;
+
+*	When using PROC EXPORT, using:
+		DATA=		specifies the SAS data set to be exported
+		OUTFILE=	specifies the name of the output data file to be created
+	Use the NEWFILE= statement to indicate whether the workbook needs to be created (YES)
+		or whether a new worksheet is being added to an existing workbook (NO)
+
+	Goal:  Create a MS Excel workbook named 'Labs Export.xlsx' with a
+			worksheet named 'Labs2015'   *;
+PROC EXPORT
+		DATA	= CanImpt.Laboratory_2015 
+		OUTFILE	= "&CourseRoot/Cancer RCT/Data/NJCC Exported Lab Data - PROC EXPORT.xlsx" 
+		DBMS	= XLSX
+		LABEL
+		REPLACE	;
+     SHEET	= "Labs2015"; 
+     NEWFILE= YES;
+RUN;
+
+*	Goal:  Add a new worksheet named 'Labs2016' to the existing workbook   *;
+PROC EXPORT
+		DATA	= CanImpt.Laboratory_2016 
+		OUTFILE	= "&CourseRoot/Cancer RCT/Data/NJCC Exported Lab Data - PROC EXPORT.xlsx" 
+		DBMS	= XLSX
+		LABEL
+		REPLACE	;
+     SHEET	= "Labs2016"; 
+     NEWFILE= NO;
+RUN;
+
+
+
+
+*	SECTION 2.2.7 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - USING THE IMPORT WIZARD   *; RUN;
+
+*	No code for this subsection
+	Show how code generated using the import wizard can be saved in a SAS file   *;
+
+
+*	Illustration 2:  Creating a MS Excel .xls Workbook with Multiple Worksheets   *; RUN;
+
+*	The PCFILES engine is being used, so this will not work on SAS University Edition
+		or SAS OnDemand for Academics   *;
+LIBNAME ORExport PCFILES 
+	PATH="&CourseRoot/Cancer RCT/Data/OICR Exported Lab Data.xls";
+
+DATA	ORExport.Pt1;
+	SET	CanImpt.Lab_Data_Pt1;
+	RUN;
+
+DATA	ORExport.Pt2;
+	SET	CanImpt.Lab_Data_Pt2;
+	RUN;
+
+DATA	ORExport.Pt3;
+	SET	CanImpt.Lab_Data_Pt3;
+	RUN;
+
+DATA	ORExport.Pt4;
+	SET	CanImpt.Lab_Data_Pt4;
+	RUN;
+
+DATA	ORExport.Pt5;
+	SET	CanImpt.Lab_Data_Pt5;
+	RUN;
+
+*	Note:  This step is to show the contents of the .xls file created   *;
+PROC CONTENTS DATA = ORExport._ALL_;
+	RUN;
+
+LIBNAME ORExport CLEAR;
+
+
+*	Illustration 3:  Creating a MS Excel .xls Workbook Using PROC COPY   *; RUN;
+
+*	The PCFILES engine is being used, so this will not work on SAS University Edition
+		or SAS OnDemand for Academics   *;
+LIBNAME ORExport PCFILES 
+	PATH="&CourseRoot/Cancer RCT/Data/OICR Exported Lab Data - PROC COPY.xls";
+
+PROC COPY
+		IN	= CanImpt
+		OUT	= ORExport;
+	SELECT	Lab_Data_Pt1 Lab_Data_Pt2 Lab_Data_Pt3
+			Lab_Data_Pt4 Lab_Data_Pt5;
+	RUN;
+
+*	Note:  This step is to show the contents of the .xls file created   *;
+PROC CONTENTS DATA = ORExport._ALL_;
+	RUN;
+
+LIBNAME ORExport CLEAR;
+
+
+
+
+*	SECTION 2.2.8 - SOLUTIONS   *; RUN;
+
+*	No Comprehension Checks due to the many differences between students!   *;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
