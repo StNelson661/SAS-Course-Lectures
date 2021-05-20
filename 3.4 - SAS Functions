@@ -1,0 +1,855 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	3.4 - SAS Functions.sas                                                 *
+*	PURPOSE:	Illustrate material in Chapter 3.4                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-10-04																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	[Enter data set name(s)]                                                *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-10-03  SMN Added TOC & Comprehension Checks                        *
+*               2019-09-19  SMN Re-structured lecture and added material                *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 3.4.0 - Using SAS Functions                                             *
+*   	Section 3.4.1 - Numeric Functions                                               *
+*   	Section 3.4.2 - Date Functions                                                  *
+*   	Section 3.4.3 - Character Functions                                             *
+*   	Section 3.4.4 - Additional Material                                             *
+*   	Section 3.4.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+LIBNAME HypImpt    "&CourseRoot/Hypertension Study/Data/2_Import";
+
+
+
+
+*	SECTION 3.4.0 - USING SAS FUNCTIONS   *; RUN;
+
+*	A SAS function performs a specific computation or manipulation
+		It is a routine that accepts arguments and returns a value (sort of a mini program)
+	The library of SAS functions consists of 529 functions as of SAS 9.4M6 (75 are illustrated below)
+
+	The library of SAS functions may be found at support.sas.com
+		The documentation provides details for each function
+
+	Functions may be used in DATA step statements anywhere you can use an expression
+		It is very common to use them in assignment statements (so also with conditional processing)
+		They may also be used when subsetting data, so in WHERE expressions
+			and subsetting IF statements (coming in Part 4)
+
+	The typical syntax when used in an assignment statement is:
+		TargetVbl	= FCN(argument1, argument2, ...)
+
+	All functions MUST be followed by parentheses
+		(this is how SAS discriminates between a function and a variable)
+	Arguments may be constants, expressions, or variables
+
+	Functions typically operate on a single observation (think horizontally)
+	To process across observations (think vertically), tools that could be used include:
+		The RETAIN statement
+		Sum statements
+		PROCs (e.g. PROC MEANS to calculate statistics across all observations)
+
+	Functions may be nested, and may be used as part of an expression
+	Be sure to match parentheses
+		Ctl + [ or ] moves cursor to matching parentheses! (if not within a commment)
+
+	The keyword "OF" is required before referencing a shortcut for a list of numeric variables
+		(see Additional Material when multiple shortcuts are desired in an expression)   *;
+
+
+
+
+*	SECTION 3.4.1 - NUMERIC FUNCTIONS   *; RUN;
+
+
+*	Illustration 1 - Numeric Functions and Missing Values   *; RUN;
+
+* Creating data for the illustration *;
+DATA	WORK.Scores;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			Quiz1 - Quiz3;
+	DATALINES;
+Amy 4 . 5
+Bob 5 5 4
+;
+
+*	Numeric functions typically ignore missing values   *;
+DATA	WORK.Illus;
+	SET	WORK.Scores;
+
+	QuizTotal1	= Quiz1 + Quiz2 + Quiz3;
+	QuizTotal2	= SUM(OF Quiz1 - Quiz3);
+
+	* NB:  QuizTotal3 creates incorrect result (no "OF" keyword), but no ERROR message *;
+	QuizTotal3	= SUM(Quiz1 - Quiz3);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Useful Mathematical Functions   *; RUN;
+
+DATA WORK.Illus;
+	
+	Ln			= LOG(2.72);
+	Log10		= LOG10(100);
+	Expon		= EXP(2);
+	Minimum		= MIN(2, 4, 8);
+	Maximum		= MAX(2, 4, 8);
+	Mean		= MEAN(2, 4, 8);
+	InputCnt	= N(2, 4, 8);
+	InputCnt2	= N(2, 4, 8, .); * Note: N returns the number of non-missing arguments *;
+	MissCnt		= NMISS(70, ., 90, 80, ., 100); * Intended for only numeric arguments *;
+	AnyMiss		= CMISS(70, ., 90, 80, ., 100, 'Amy', ' ', 'Chris'); * For numeric or character arguments *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Truncation Functions   *; RUN;
+
+*	These functions are used to truncate numeric values
+	Often, the goal is simply to display an appropriate (i.e. fewer) number of decimals
+	To do this, I'd recommend using a format instead of a truncation function because
+		truncating values permanently lose their precision!   *;
+DATA	WORK.Illus;
+
+	Pi = 3.14159;
+
+	Integer	= INT(Pi); * Returns the integer portion *;
+
+	Round1	= ROUND(Pi); * Default round-off unit is 1, with .5 rounding up *;
+	Round2	= ROUND(Pi, 2); * Rounds to the nearest multiple of 2 *;
+	Round3	= ROUND(Pi, 0.2); * Rounds to the nearest 0.2 *;
+
+	Floor	= FLOOR(Pi);
+
+	Ceiling	= CEIL(Pi);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Truncated Values Have Lost Precision   *; RUN;
+PROC PRINT	DATA = WORK.Illus;
+	FORMAT	_ALL_ 7.3;
+	RUN;
+
+*	Use a format to only display the integer portion (if that's the goal)   *;
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	Pi	2.;
+	RUN;
+
+*	The original value still has its precision   *;
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+
+
+
+*	SECTION 3.4.2 - DATE FUNCTIONS   *; RUN;
+
+
+*	Illustration 1 - Some Useful Date Functions   *; RUN;
+
+*	Although arguments can be constants, they are typically variables for these functions
+	The TODAY function is a rare function which doesn't accept any arguments
+	It returns the current date from the computer's system calendar
+	I will use it to create the 'Today' variable which is the argument for the
+		functions that follow   *;
+DATA	WORK.Illus;
+	
+	Today		= TODAY(); * Alias is DATE() *;
+
+	Month		= MONTH(Today);
+	Day			= DAY(Today);
+	Year		= YEAR(Today);
+	Qtr			= QTR(Today);
+	Week		= WEEK(Today, 'U'); * U: Wk starts on Sunday, values can be 0 to 53 *;
+	Weekday		= WEEKDAY(Today); * 1 = Sunday, 2 = Monday, etc. *;
+	JulianDt	= JULDATE(Today);
+
+	FORMAT	Today	MMDDYY10.;
+
+	RUN;
+
+PROC PRINT	DATA = WORK.Illus;
+	RUN;
+
+*	NB:  Parentheses are required for every function (even when no arguments are used)!   *;
+DATA	WORK.Illus;
+	ThisDt		= TODAY; * This won't produce desired results *;
+	CurrentDt	= TODAY();
+	Tomorrow	= TODAY() + 1;
+	RUN;
+
+PROC PRINT	DATA = WORK.Illus;
+	FORMAT	CurrentDt Tomorrow	WORDDATE.;
+	RUN;
+
+
+*	Illustration 2 - Some Useful Time Functions   *; RUN;
+
+*	Again, although arguments can be constants, they are typically variables for these functions
+	The TIME function does not take any arguments, but takes the time from the system clock
+
+	I will use the TIME function to create 'TimeNow' which will be the argument for the
+		functions that follow   *;
+DATA	WORK.Illus;
+
+	TimeNow	= TIME();
+
+	Hour	= HOUR(TimeNow);
+	Minute	= MINUTE(TimeNow);
+	Second	= SECOND(TimeNow);
+
+	FORMAT	TimeNow		TIMEAMPM.;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Some Useful Datetime Functions   *; RUN;
+
+*	Again, although arguments can be constants, they are typically variables for these functions
+	The DATETIME function does not take any arguments, but takes the time from the system calendar & clock
+
+	I will use the DATETIME function to create 'DateTime' which will be the argument for the
+		functions that follow   *;
+DATA	WORK.Illus;
+
+	DateTime	= DATETIME();
+
+	Date		= DATEPART(DateTime);
+	Time		= TIMEPART(DateTime);
+	Hour		= HOUR(DateTime); * Time functions can also work on a datetime value *;
+	Minute		= MINUTE(DateTime);
+	Second		= SECOND(DateTime);
+
+	FORMAT	DateTime	DATETIME.
+			Date		MMDDYY10.
+			Time		TIMEAMPM.	;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Functions that Create Date, Time, or DateTime Values   *; RUN;
+
+*	The previous functions extracted components from a date, time, or datetime value
+	Below we create a date, time, or datetime value from individual components
+	Constants and variables are both commonly used as arguments for these functions   *;
+DATA	WORK.Illus;
+
+	YrQtr		= YYQ(2012, 4); * Note that the default is the start of the quarter *;
+	CreateDate	= MDY(12, 24, 1960); * Using constants *;
+
+	CreateTime	= HMS(0, 1, 37);
+
+	CreateDtTm	= DHMS('01JAN2000'D, 20, 15, 39);
+
+	FORMAT	YrQtr CreateDate 	MMDDYY10.
+			CreateTime			TIMEAMPM.
+			CreateDtTm			DATETIME.;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 5 - Additional Date Functions   *; RUN;
+
+*	Notice the use of nesting functions in some of the examples   *;
+DATA	WORK.Illus;
+
+	* HOLIDAY returns the date for a specified holiday for a specified year *;
+	LaborDay		= HOLIDAY('LABOR', YEAR(TODAY()));
+
+	* NWKDOM returns the date for the nth occurrence of a weekday for a particular month and year *;
+	LastSatInOct	= NWKDOM(5, 7, 10, YEAR(TODAY()) ); * 5 = Last, 7 = Saturday, 10 = October *;
+
+	* INTNX increments a date, time, or datetime by a given interval
+	  Note:  Many different intervals may be used (e.g. YEAR, MONTH, WEEK, etc.) *;
+	FiveYrsInFuture		= INTNX('YEAR', TODAY(), 5, 'MIDDLE'); * Other alignments are 'BEGINNING', 'END', and 'SAME' *;
+
+	MonsBw_Boundaries	= INTCK('MONTH', '30APR2017'D, '04JUN2017'D, 'DISCRETE'); * Counts how many month "boundaries" were crossed *;
+	MonsBw_FullMons		= INTCK('MONTH', '30APR2017'D, '04JUN2017'D, 'CONTINUOUS'); * Counts how many "full" months have elapsed *;
+
+	* YRDIF returns the difference in years between 2 dates
+	  Although other bases are available, 'AGE' (default) provide conventional year intervals *;
+	YrsBw1				= YRDIF('28FEB2019'D, '28FEB2020'D, 'AGE'); * Note this is 365 days *;
+	YrsBw2				= YRDIF('28FEB2020'D, '28FEB2021'D, 'AGE'); * Note this is 366 days *;
+
+	FORMAT	LaborDay LastSatInOct	WEEKDATE.
+			FiveYrsInFuture			MMDDYY10.
+			YrsBw:					6.4;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 6 - Additional Examples   *; RUN;
+
+*	Sometimes functions need to be combined to achieve the desired result
+
+	Goal 1:  Find the day of the week for Christmas in 2001
+	Goal 2:  Find the date of the 1988 presidential election
+				Election day is the Tuesday after the 1st Monday in November
+				(Notice that this is not necessarily the 1st Tuesday in November!)   *;
+DATA	WORK.Illus;
+
+	* Goal 1 *;
+	WkDayOfChristmas2001	= WEEKDAY(HOLIDAY('CHRISTMAS', 2001));
+
+	* Goal 2 *;
+	ElectionDt1988	= NWKDOM(1, 2, 11, 1988) + 1;
+
+	FORMAT	ElectionDt1988	WEEKDATE.;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Note:  If the goal was simply to display the day of week for Christmas 2001
+			you could simply use the WEEKDAY format!   *;
+DATA	WORK.Illus;
+	WkDayOfChristmas2001	= HOLIDAY('CHRISTMAS', 2001);
+	FORMAT	WkDayOfChristmas2001	DOWNAME.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+
+*	SECTION 3.4.3 - CHARACTER FUNCTIONS   *; RUN;
+
+
+*	Illustration 1 - Functions Which Change Case of Characters   *; RUN;
+
+DATA	WORK.Illus;
+	
+	Name = "SARAH o'malley";
+
+	UpperCase		= UPCASE(Name);
+	LowerCase		= LOWCASE(Name);
+	ProperCase1		= PROPCASE(Name);
+	ProperCase2		= PROPCASE(Name, " '");
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Functions Which Remove Blanks from Text Strings   *; RUN;
+
+DATA	WORK.Illus;
+
+	City = ' Phoenix,  AZ:     85034 ';
+
+	* 13 characters *;
+	LeftAligned		= LEFT(City); * Shifts first non-blank character to first position *;
+	RightAligned	= RIGHT(City);
+	Trimmed			= TRIM(City); * Removes trailing blanks *;
+	Stripped		= STRIP(City); * Removes leading and trailing blanks *;
+	CompressBlanks	= COMPBL(City); * Replaces multiple blanks with a single blank *;
+	RemoveBlanks	= COMPRESS(City); * Default character to remove is a blank *;
+
+	*	Remove other characters   *;
+	*	Note:  If anything is specified, blanks must be specified to also remove them   *;
+	RemovePunct		= COMPRESS(City, ' ,:'); * Removing blanks, commas, and 'e's *;
+	Nice			= STRIP(COMPBL(COMPRESS(City, ',:')));
+
+	RUN;
+
+*	Note:  Trailing blanks are not automatically displayed.  Properties show the max length = 24   *;
+PROC PRINT DATA = WORK.Illus;
+	VAR City LeftAligned RightAligned Trimmed Stripped;
+	FORMAT	LeftAligned RightAligned Trimmed Stripped $QUOTE26.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR City CompressBlanks RemoveBlanks RemovePunct Nice;
+	FORMAT	CompressBlanks RemoveBlanks	RemovePunct Nice	$QUOTE26.;
+	RUN;
+
+*	The COMPRESS function has several optional modifiers, for example ...
+		D (or d) adds Digits to the list of characters to be compressed
+		K (or k) Keeps the characters in the list instead of removing them
+		Enclose all desired modifiers inside quotes as the 3rd argument
+
+	Goal:  Create a variable containing the zip code from the city string   *;
+DATA	WORK.Illus;
+	City	= ' Phoenix,  AZ:     85034 ';
+	LENGTH	ZipCd $ 5;
+	ZipCd	= COMPRESS(City, , 'DK');
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Some Functions Which Search for A Type of Character   *; RUN;
+
+*	These types of functions will return a numeric value which is the position where
+		the first instance is found of what's being searched for
+	The function will return a 0 if what is searched for is not found!   *;
+DATA	WORK.Illus;
+
+	Name = 'Alice Amy Anderon';
+	
+	FirstSpc		= ANYSPACE(Name); * Returns position of first space *;
+	FirstSpcGE8th	= ANYSPACE(Name, 8); * 8 is the starting position *;
+	FirstSpcLE9th	= ANYSPACE(Name, -9); * A negative number searches from R -> L from that position *;
+	FirstSpcFromRt	= ANYSPACE(Name, -999); * Returns position of first space going R -> L (assuming string < 1000 characters) *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Other "ANY" functions, all with the same options as illustrated above
+	These functions can be invaluable when cleaning data
+		e.g. Use ANYLOWER to check if there are any lowercase characters in a state code   *;
+DATA	WORK.Illus;
+
+	Code = 	'_|*X8 = Password';
+
+	FirstAlpha	= ANYALPHA(Code); * Returns position of first alphabetic character *;
+	FirstLower	= ANYLOWER(Code);
+	FirstUpper	= ANYUPPER(Code);
+	FirstDigit	= ANYDIGIT(Code);
+	FirstAlNum	= ANYALNUM(Code);
+	FirstPunct	= ANYPUNCT(Code);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	The "NOT" functions perform the opposite action as the "ANY" functions
+	This family of functions includes:
+		NOTSPACE, NOTALPHA, NOTLOWER, NOTUPPER, NOTDIGIT, NOTALNUM, NOTPUNCT, and more
+
+	Goal:  Find out if any zipcodes contain non-digits   *;
+DATA	WORK.Illus;
+	ZipCd = '723l5';
+	FirstNonDigit = NOTDIGIT(ZipCd);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Some Functions Which Search for Specific Characters   *; RUN;
+
+*	The FINDC function is a newer version of the INDEXC function
+	It contains the additional capabilities to specify (among other things)
+		1) A starting position for the search
+		2) The direction of the search (a negative position searches from R -> L)
+		3) Ignore case (use "i")
+
+	These functions also return the first position where what is searched for is found   *;
+
+DATA	WORK.Illus;
+	Directory = 'Volleyball: Assistant coach - (303) 555-2303';
+
+	Find_a			= FINDC(Directory, 'a');
+	Find_a_GE10th	= FINDC(Directory, 'a', 10); * Finds the first 'a' starting at the 10th position *;
+	FindAnyB		= FINDC(Directory, 'B', 'i'); * Finds the first 'B' regardless of case *;
+	Find3Or5		= FINDC(Directory, '35'); * Finds any '3' or '5'--not looking for '35'! *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 5 - Some Functions Which Search for Specific Text Strings   *; RUN;
+
+*	Again, the FIND function is a newer version of the INDEX function with the same
+		additional capabilities described above   *;
+DATA	WORK.Illus;
+	Directory = 'Volleyball: Assistant coach - (303) 555-2303';
+
+	FindAreaCode	= FIND(Directory, '(303)'); * Finds string identical to listed *;
+	FindCoach1		= FIND(Directory, 'Coach');
+	FindCoach2		= FIND(Directory, 'Coach', "i"); * Ignores case *;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Use the FINDW function to search for a "word" within a text string   *;
+DATA WORK.Illus;
+	Phrase = "Don't give antibiotics to an ant.";
+	FindAnt = FINDW(Phrase, 'ant');
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 6 - A Function Which Extracts Part of Text Strings   *; RUN;
+
+*	NB:  The SUBSTR function may be used on both sides of the = sign
+	On the right:  It extracts a substring from a text string
+		By default, the length of the target variable is equal to the variable used in the SUBSTR argument
+			(so it's a good idea to control the length of a newly created variable with the LENGTH statement)
+		Argument	This argument specifies the ...
+		-------		---------------------------------------------------
+		1st			variable or text string to extract from
+		2nd			position to start extracting from
+		3rd			number of characters to extract (optional)
+						Without the 3rd argument, SAS will extract the remainder of the string
+
+	On the left:   It replaces value(s) with specified value(s) (see Additional Material)   *;
+DATA	WORK.Illus;
+	PhoneNum = '(720) 555-1234';
+	LENGTH	AreaCd	$ 3;
+	AreaCd	= SUBSTR(PhoneNum, 2, 3);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 7 - Some Functions Which Concatenate Text Strings   *; RUN;
+
+*	Besides the concatenation operator (|| or !!), there is a family of concatenation functions
+		(the CAT functions)
+
+	Note:  By default, variables created using the SCAN function have a length of the source variable
+			(so use a LENGTH statment to control the variable length)   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Address	(	KEEP	=	First Middle Last	);
+	*	This data doesn't have leading blanks, so I'm creating variables with 2 leading blanks   *;
+	First2	= "  " || First;
+	Middle2 = "  " || Middle;
+	Last2	= "  " || Last;
+
+	LENGTH	FullNm_CAT FullNm_CATT FullNm_CATT2 FullNm_CATS FullNm_CATX $ 50;
+
+	*	CAT leaves leading and trailing blanks unchanged   *;
+	FullNm_CAT	= CAT(First2, Middle2, Last2);
+
+	*	CATT removes trailing blanks (last T = TRIM)   *;
+	FullNm_CATT	= CATT(First2, Middle2, Last2);
+	*	Notice that the leading blanks are not stripped with CATT   *;
+
+	*	CATS strips leading and trailing blanks (last S = STRIP)   *;
+	FullNm_CATS	= CATS(First2, Middle2, Last2);
+
+	*	CATX strips leading and trailing blanks and inserts one or more separator characters   *;
+	FullNm_CATX	= CATX(' ', First2, Middle2, Last2);
+
+	KEEP	FullNm:;
+
+	FORMAT	FullNm: QUOTE50.; * Using this format so we can see leading or trailing blanks *;
+
+	RUN;
+
+PROC PRINT	DATA = WORK.Illus;
+	VAR	FullNm_CAT FullNm_CATT FullNm_CATS FullNm_CATX;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.4.3   |
+* ----------------------------- *
+	The 'CanImpt.Address' data set contains both 'Street_Num' and 'Street_Name' variables
+
+	Task:  Create a variable named 'Street' which is a concatenation of the street number
+			and street name
+			(The first observation should display "989 N Main St")   *;
+DATA WORK.NewAddress;
+	SET	CanImpt.Address ( KEEP = Street_Num Street_Name );
+	LENGTH Street $ 40;
+	Street = [finish-assignment-statement];
+	RUN;
+
+PROC PRINT DATA = WORK.NewAddress;
+	RUN;
+
+
+*	Illustration 8 - A Function to Extract "Words" from Text Strings   *; RUN;
+
+*	When a specific location is to be extracted, the SUBSTR function can accomplish that
+	When a specific 'section' is to be extracted, the SCAN function is a great tool
+	The SCAN function returns the nth "word" from a character string
+		Argument	This argument specifies the ...
+		-------		---------------------------------------------------
+		1st			variable or text string to extract from
+		2nd			nth "word" to extract
+						A negative # instructs to move from R -> L
+		3rd			delimiter(s) (i.e. what breaks the text string into "words"
+						A space is the default delimiter
+
+	Note:  By default, variables created using the SCAN function have a length of the source variable
+			(so use a LENGTH statment to control the variable length)   *;
+DATA	WORK.Illus;
+	SET CanImpt.Patinfo (KEEP = Address);
+
+	StreetNum	= SCAN(Address, 1); * The default delimiter is a space *;
+	City		= SCAN(Address, 2, ','); * The city is the 2nd "word" when separated by commas *;
+	ZipCd		= SCAN(Address, -1); * Zip code is the first "word" when going right to left *;
+
+	FORMAT	City $QUOTE30.;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	How to find each "piece" of information in a street address   *;
+DATA	WORK.Illus;
+	SET CanImpt.Patinfo (KEEP = Address);
+
+	LENGTH	StreetNum	$ 5
+			StreetNm	$ 25
+			City		$ 15
+			StateCd		$ 2
+			ZipCd		$ 5;
+
+	StreetNum	= SCAN(Address, 1);
+	StreetNm	= STRIP(SUBSTR(SCAN(Address, 1, ','), ANYSPACE(Address)));
+	City		= STRIP(SCAN(Address, 2, ','));
+	StateCd		= UPCASE(SCAN(Address, -2)); * Or could use: UPCASE(SCAN(SCAN(Address, 3, ','), 1));
+	ZipCd		= SCAN(Address, -1);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 9 - A Function to Change Text Strings   *; RUN;
+
+*	The TRANWRD function will search for a specific target string and replace it with
+		another string (which may be a different length)   *;
+DATA WORK.Illus;
+	City = 'Honolulu, HI';
+	CityLong = TRANWRD(City, 'HI', 'Hawaii');
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Now let's look at the functions used in the program:
+	"Prg 2 - Create Tabulation Data - Cancer RCT.sas"   *;
+
+
+
+
+*	SECTION 3.4.4 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - CALL ROUTINES   *; RUN;
+
+*	Like functions, CALL routines also perform computations (or system manipulations)
+	The difference is that they do not return a value (as a function does)
+		and they cannot be used in expressions
+	Instead, they alter variable values (or perform other system manipulations)
+	All routines are invoked with the CALL statement followed by the name of the routine
+
+	SAS has 57 CALL routines as of SAS 9.4M6 (12 of which generate random numbers)
+
+	Creating an example data set   *;
+DATA	WORK.Scores;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			Quiz1 - Quiz10;
+	DATALINES;
+Amy 19 9 8 9 15 6 5 14 8 11
+Bob 8 12 20 12 5 15 16 7 6 9
+Cal 15 17 5 9 17 15 20 16 16 19
+;
+
+*	The SORTN routine sorts the values of numeric arguments   *;
+DATA WORK.Scores_Sorted;
+	SET WORK.Scores;
+	CALL SORTN(OF Quiz:);
+	RUN;
+
+PROC PRINT DATA = WORK.Scores_Sorted;
+	RUN;
+
+*	The MISSING routine assigns missing values to the specified variables
+
+	Goal:  Set Bob's quiz scores to missing for quizzes 2, 3, 4, 5, 7, 8, 9   *;
+DATA WORK.Scores2;
+	SET WORK.Scores;
+	IF Name = 'Bob' THEN CALL MISSING(OF Quiz2-Quiz5 Quiz7-Quiz9);
+	* When 2 shortcuts are desired, use a space to separate the shortcuts or use a comma
+		but precede 2nd shortcut with OF again, e.g. (OF Quiz2-Quiz5, OF Quiz7-Quiz9)   *;
+	RUN;
+
+PROC PRINT DATA = WORK.Scores2;
+	RUN;
+
+
+*	Illustration 2 - Using the LARGEST & SMALLEST Functions   *; RUN;
+
+*	The LARGEST function returns the kth largest non-missing value from all values specified
+	The SMALLEST function returns the kth smallest non-missing value from all values specified
+
+	Goal:  Find the highest 2 quiz scores and the lowest quiz score   *;
+DATA WORK.Illus;
+	SET WORK.Scores;
+	Rank1 = LARGEST(1, OF Q:);
+	Rank2 = LARGEST(2, OF Q:);
+	Worst = SMALLEST(1, OF Q:);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Using the SUBSTR Function on the Left of the = Sign   *; RUN;
+
+*	On the left:   It replaces value(s) with specified value(s)
+		Argument	This argument specifies the ...
+		-------		--------------------------------------------------------------------------
+		1st			variable or text string or variable to be changed
+		2nd			beginning character position of the string to be replaced
+		3rd			length of the substring that is replaced (optional)
+						Without the 3rd argument, SAS will extract the remainder of the string
+
+	Goal:  Change the area code from 720 to 303   *;
+DATA	WORK.Illus;
+	CellPhone	= '(720) 555-1234';
+	SUBSTR(CellPhone, 2, 3) = '303';
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Example Using Character Functions   *; RUN;
+
+*	This is an example of how character functions may be used to manipulate results
+		so they are suitable for presentation
+		
+	Goal:  Present the estimate and 95% confidence interval in the form:  Est (Lower, Upper)
+
+	Creating example results to be manipulated   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Estimate
+			SD	;
+	DATALINES;
+12.4216773 1.4535007
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+DATA	WORK.Results;
+	SET	WORK.Illus;
+
+	LowerLimit	= Estimate - 1.96*SD;
+	UpperLimit	= Estimate + 1.96*SD;
+
+	EstAndCI	=	STRIP(PUT(Estimate, 4.1))	||	' ('	||
+					STRIP(PUT(LowerLimit, 4.1))	||	', '	||
+					STRIP(PUT(UpperLimit, 4.1))	||	')'		;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Results LABEL NOOBS;
+	LABEL EstAndCI = 'Estimate and 95% Confidence Interval';
+	RUN;
+
+*	Same scenario, but assuming a small sample size (so use the critical value from a t distribution)   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Estimate
+			SD
+			DF	;
+	DATALINES;
+12.4216773 1.4535007 12
+;
+
+*	The TINV function returns a quantile from the t distribution
+	(This is one of many available statistical distribution functions)   *; 
+DATA	WORK.Results;
+	SET	WORK.Illus;
+
+	CritVal		= TINV(0.975, DF);
+	LowerLimit	= Estimate - CritVal*SD;
+	UpperLimit	= Estimate + CritVal*SD;
+
+	EstAndCI	=	STRIP(PUT(Estimate, 4.1))	||	' ('	||
+					STRIP(PUT(LowerLimit, 4.1))	||	', '	||
+					STRIP(PUT(UpperLimit, 4.1))	||	')'		;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Results LABEL NOOBS;
+	LABEL EstAndCI = 'Estimate and 95% Confidence Interval';
+	RUN;
+
+
+
+
+*	SECTION 3.4.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.4.3   |
+* ----------------------------- *
+	The 'CanImpt.Address' data set contains both 'Street_Num' and 'Street_Name' variables
+
+	Task:  Create a variable named 'Street' which is a concatenation of the street number
+			and street name
+			(The first observation should display "989 N Main St")   *;
+DATA WORK.NewAddress;
+	SET	CanImpt.Address ( KEEP = Street_Num Street_Name );
+	LENGTH Street $ 40;
+	Street = CATX(' ', Street_Num, Street_Name);
+	RUN;
+
+PROC PRINT DATA = WORK.NewAddress;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
