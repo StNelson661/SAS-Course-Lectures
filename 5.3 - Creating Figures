@@ -1,0 +1,868 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	5.3 - Creating Figures.sas                                              *
+*	PURPOSE:	Illustrate material in Chapter 5.3                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-11-27																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-12  SMN Added TOC & Comprehension Checks                        *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 5.3.1 - ODS Graphics Basics                                             *
+*   	Section 5.3.2 - Creating Univariate Figures                                     *
+*   	Section 5.3.3 - Creating Bivariate Figures                                      *
+*   	Section 5.3.4 - Specifying Figure Attributes                                    *
+*   	Section 5.3.5 - Multiple (3+) Variables                                         *
+*   	Section 5.3.6 - Additional Material                                             *
+*   	Section 5.3.7 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanTabs	"&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME CanAnl	"&CourseRoot/Cancer RCT/Data/4_Analysis";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 5.3.1 - ODS GRAPHICS BASICS   *; RUN;
+
+*	Information:
+	ODS Graphics is a part of the Output Delivery System (ODS)
+		ODS Graphics creates figures (as opposed to tables and listings)
+	ODS Graphics is part of Base SAS, so now figures can be created
+		without licensing another product (e.g. SAS/GRAPH)   *;
+
+
+*	Illustration 1 - Automatically-Generated Figures   *; RUN;
+
+*	ODS Graphics produces figures automatically for many of the statistical procedures
+
+	Goal:  Test if lesion ratios  are different by treatment group
+	Note:  Figures are created without coding any additional statements!   *;
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+
+*	Illustration 2 - Using the PROC TTEST Statement PLOTS= Option   *; RUN;
+
+*	Most statistical procedures provide control of the figures produced automatically
+	This is often controlled in the PROC statement through the PLOTS= option
+
+	Note:  Details of all options can be found in the procedure documentation
+	Goal:  Produce a plot of the CI of the difference between means, with a reference line at 0   *;
+PROC TTEST
+		DATA = CanAnl.CanAnalysis1
+		PLOTS(SHOWNULL) = INTERVAL;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+*	Goal:  Restrict the output to only display the boxplot for each group   *;
+PROC TTEST
+		DATA = CanAnl.CanAnalysis1
+		PLOTS(ONLY) = BOXPLOT;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+
+*	Illustration 3 - Using the TABLES Statement (PROC FREQ) PLOTS= Option   *; RUN;
+
+*	In PROC FREQ, plots are controlled using the PLOTS= option in the TABLES statement   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	MaxGrade * TxNm
+		/	PLOTS = (FreqPlot);
+	RUN;
+
+*	This illustrates some additional options available   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	MaxGrade * TxNm
+		/	PLOTS = (FreqPlot	(	ORIENT	= HORIZONTAL
+									TWOWAY	= STACKED
+									GROUPBY	= COLUMN	)
+					);
+	RUN;
+
+
+*	Illustration 4 - Using the ODS GRAPHICS Statement   *; RUN;
+
+*	Automatic production of figures can be controlled using the ODS GRAPHICS statement
+	Goal:  Stop production of figures   *;
+ODS GRAPHICS OFF;
+
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+*	I will turn it back on so we can continue to generate figures
+	Note:  ODS GRAPHICS is ON by default
+			(i.e. you shouldn't have to turn it on when you start your SAS session)   *;
+ODS GRAPHICS ON;
+
+
+*	Notes:
+	1. It is common to want to produce a figure not derived from a statistical procedure
+		ODS Graphics has "Statistical Graphics" (i.e. SG) procedures to use, including:
+			PROC SGPLOT
+			PROC SGPANEL
+			PROC SGSCATTER
+	2. These procedures allow a high degree of customization
+	3. Multiple figures may be produced and overlaid onto a single figure   *;
+
+
+
+
+*	SECTION 5.3.2 - CREATING UNIVARIATE FIGURES   *; RUN;
+
+
+
+*	SUBSECTION 5.3.2.1 - CLASSIFICATION DISTRIBUTIONS   *; RUN;
+
+*	Note:  Classification/categorical variables are typically character but may be numeric
+	I'll be illustrating this subsection primarily using a numeric variable   *;
+
+
+*	Illustration 1 - Creating a Bar Chart   *; RUN;
+
+*	Goal:  Produce a horizontal bar chart to display the number of subjects of each Sex
+	Note that the 'SexCd' variable has a format and the formatted values are displayed   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	HBAR	SexCd;
+	RUN;
+
+*	Caution: be vigilant about the number of unique values in the plotted variable
+	Goal:  Produce a vertical bar chart to display the number of subjects at each age   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	AgeAtEnroll;
+	RUN;
+
+
+*	Illustration 2 - Using Options   *; RUN;
+
+*	The DATALABEL option adds data labels (i.e. the Frequencies) to the bars   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	DATALABEL;
+	RUN;
+
+*	The summary statistic may be changed (e.g. to PERCENT)   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT = PERCENT
+						DATALABEL;
+	RUN;
+
+*	The width of the bars may be adjusted and/or shifted
+	BARWIDTH specifies the proportion of a "full" bar to be displayed
+	DISCRETEOFFSET specifies the proportion of the bar to shift (negative = left)   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	BARWIDTH		= 0.6
+						DISCRETEOFFSET	= -0.1;
+	RUN;
+
+
+
+
+*	SUBSECTION 5.3.2.2 - NUMERIC DISTRIBUTIONS   *; RUN;
+
+*	Numerical distributions may only be created using numeric variables
+	Below I will create data sets to use in the following illustrations   *;
+DATA	WORK.HCT
+		WORK.HGB	(	KEEP	=	SubjID LabDt LabVal
+						RENAME	= (	LabVal = HGBVal	))
+		WORK.WBC	(	KEEP	=	SubjID LabDt LabVal
+						RENAME	= (	LabVal = WBCVal	));
+	SET	CanTabs.Labs	(	DROP	=	LabUnits	);
+	IF			LabTest = 'Hematocrit'				THEN OUTPUT WORK.HCT;
+		ELSE IF LabTest = 'Hemoglobin'				THEN OUTPUT WORK.HGB;
+		ELSE IF LabTest = 'White Blood Cell Count'	THEN OUTPUT WORK.WBC;
+	RUN;
+
+DATA	WORK.Combo;
+	MERGE	WORK.HGB
+			WORK.WBC;
+	BY	SubjID LabDt;
+	LABEL	HGBVal = 'Hemoglobin'
+			WBCVal = 'White Blood Cells';
+	RUN;	
+
+
+*	Illustration 1 - Creating a Histogram   *; RUN;
+
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal;
+	RUN;
+
+
+*	Illustration 2 - Controlling the Bins   *; RUN;
+
+*	The SHOWBINS option places a tickmark at the midpoint of each bin   *;
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal	/	SHOWBINS;
+	RUN;
+
+*	The BINWITH option specifies the width of each bin
+	Goal:  Create a histogram where each bar spans a width of 5   *;
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal	/	BINWIDTH	= 5
+							SHOWBINS;
+	RUN;
+
+*	Note:	The BINSTART option specifies the midpoint of the first bin
+			The SCALE option specifies the vertical axis scale
+	Goal:  Create a histogram where each bar starts at a multiple of 5   *;
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal	/	BINWIDTH	= 5
+							BINSTART	= 22.5
+							SHOWBINS
+							SCALE		= COUNT
+							DATALABEL	= PERCENT;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.3.1   |
+* ----------------------------- *
+	Task:  Create a histogram of the 'WBCVal' variable from the WORK.WBC data set
+			The histogram should:
+			1)	Have bins with a width of 1
+			2)	Have a bin for each integer (e.g. from 5-6, 6-7, 7-8, etc)
+			3)	Display the midpoint of each bin on the X axis
+			4)	Show the PROPORTION on the Y axis
+			5)	Show the count on top of each bin   *;
+PROC SGPLOT DATA = WORK.WBC;
+	HISTOGRAM	WBCVal	/	[enter-options-here];
+	RUN;
+
+
+*	Illustration 3 - Overlaying a Density Curve   *; RUN;
+
+*	Goal:  Display a kernel density curve over the histogram
+	Note:  The KERNEL option produces a non-parametric estimate of the PDF of a random variable   *;
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal	/	BINWIDTH	= 4
+							SHOWBINS;
+	DENSITY		LabVal	/	TYPE		= KERNEL;
+	RUN;
+
+*	NB:  Plotting statements are layered--following statements are laid OVER previous statements!   *;
+PROC SGPLOT DATA = WORK.HCT;
+	DENSITY		LabVal	/	TYPE		= KERNEL;
+	HISTOGRAM	LabVal	/	BINWIDTH	= 4
+							SHOWBINS;
+	RUN;
+
+
+*	Illustration 4 - Using the TRANSPARENCY= Option   *; RUN;
+
+*	When layers overlap, incorporating some "transparency" allows all layers to be viewed
+	TRANSPARENCY may be set from 0 (completely opaque) to 1 (completely transparent)   *;
+PROC SGPLOT DATA = WORK.Combo;
+	HISTOGRAM	WBCVal	/	TRANSPARENCY	= 0.1;
+	HISTOGRAM	HGBVal	/	TRANSPARENCY	= 0.4; * Making the "top" figure more transparent *;
+	RUN;	
+
+*	This is what the overlay would look like without any transparency   *;
+PROC SGPLOT DATA = WORK.Combo;
+	HISTOGRAM	WBCVal;
+	HISTOGRAM	HGBVal;
+	RUN;	
+
+
+*	Illustration 5 - Creating a Box Plot   *; RUN;
+
+PROC SGPLOT DATA = WORK.HCT;
+	HBOX	LabVal;
+	RUN;
+
+
+
+
+*	SECTION 5.3.3 - CREATING BIVARIATE FIGURES   *; RUN;
+
+
+
+*	SUBSECTION 5.3.3.1 - 2 CATEGORICAL VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Creating a Paneled Bar Chart   *; RUN;
+
+*	PROC SGPANEL uses almost the identical syntax as PROC SGPLOT
+	The primary difference is the addition of the PANELBY statement
+	A panel will be created for each distinct value of the PANELBY variable
+
+	Goal:  Create a vertical bar chart of 'EthRaceCd' for each value of 'SexCd'   *;
+PROC SGPANEL DATA = CanAnl.CanAnalysis1;
+	PANELBY	SexCd;
+	VBAR	EthRaceCd;
+	RUN;
+
+*	Goal:  Create "stacked" bar charts
+	Note:  Use the LAYOUT= option to control the layout
+		ROWLATTICE instructs SAS to use a ROW for each level of the PANELBY variable   *;
+PROC SGPANEL DATA = CanAnl.CanAnalysis1;
+	PANELBY	SexCd	/	LAYOUT	= ROWLATTICE;
+	VBAR	EthRaceCd;
+	RUN;
+
+
+*	Illustration 2 - Creating a Bar Chart with a Group Variable   *; RUN;
+
+*	Goal:  Produce a bar chart, with bars subgrouped by sex   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	EthRaceCd	/	GROUP = SexCd;
+	RUN;
+
+
+*	Illustration 3 - Using the GROUPDISPLAY Option   *; RUN;
+
+*	The default display of a grouped bar chart is 'STACKED'
+	'CLUSTER' will display bars side-by-side   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	EthRaceCd	/	GROUP			= SexCd
+							GROUPDISPLAY	= CLUSTER;
+	RUN;
+
+
+
+*	SUBSECTION 5.3.3.2 - 1 CATEGORICAL & 1 NUMERIC VARIABLE   *; RUN;
+
+
+*	Illustration 1 - Displaying Box Plots for Each Level of a Categorical Variable   *; RUN;
+
+*	Goal:  Create box plots of lesion ratios for females and males
+	The CATEGORY= option incorporates a categorical variable   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBOX	LesionRatio	/	CATEGORY	= SexCd;
+	RUN;
+
+
+*	Illustration 2 - Bar Charts by Level of a Categorical Variable   *; RUN;
+
+*	The bar chart height is the value of a summary statistic (in this case the mean)
+	If the statistic is MEAN, MEDIAN, or SUM, a response variable must be defined
+	This figure conveys similar information to the previous illustration   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT		= MEAN
+						RESPONSE	= LesionRatio
+						BARWIDTH	= 0.5;
+	RUN;
+
+*	Goal:  Add error bars of +/- 1 standard deviation   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT		= MEAN
+						RESPONSE	= LesionRatio
+						LIMITSTAT	= STDDEV
+						BARWIDTH	= 0.5;
+	RUN;
+
+*	Goal:  Only show the errors going above the bars by 1 standard deviation   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT		= MEAN
+						RESPONSE	= LesionRatio
+						LIMITSTAT	= STDDEV
+						LIMITS		= UPPER
+						BARWIDTH	= 0.5;
+	RUN;
+
+*	Goal:  Show errors going above the bars by 1.5 standard deviations   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT		= MEAN
+						RESPONSE	= LesionRatio
+						LIMITSTAT	= STDDEV
+						LIMITS		= UPPER
+						NUMSTD		= 1.5
+						BARWIDTH	= 0.5;
+	RUN;
+
+*	Goal:  Display Standard Errors instead of Standard Deviations   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	SexCd	/	STAT		= MEAN
+						RESPONSE	= LesionRatio
+						LIMITSTAT	= STDERR
+						LIMITS		= UPPER
+						BARWIDTH	= 0.5;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.3.2   |
+* ----------------------------- *
+	Task:  Create a horizontal bar chart with 1 bar for each value of 'MaxGrade'
+			The bar chart should:
+			1)	Have a length equal to the average age for the subjects who are
+					in each bar (use 'AgeAtEnroll')
+			2)	Display the confidence limits of the mean - I did this you :)   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	HBAR	MaxGrade	/	[fill-in-option]
+							[fill-in-option]
+							LIMITSTAT	= CLM
+							LIMITS		= BOTH;
+	RUN;
+
+
+
+*	SUBSECTION 5.3.3.3 - 2 NUMERIC VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Creating a Scatterplot   *; RUN;
+
+*	Goal:  Investigate the relationship between lesion ratio and age   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	SCATTER	X	= AgeAtEnroll
+			Y	= LesionRatio;
+	REG		X	= AgeAtEnroll
+			Y	= LesionRatio;
+	RUN;
+
+
+*	Illustration 2 - Creating a Time Series Plot   *; RUN;
+
+*	Creating data for the plot   *;
+DATA	WORK.TumorVol;
+	INFILE	DATALINES;
+	INPUT	Day	Volume;
+	DATALINES;
+0  63
+4  73
+7  88
+11 104
+14 120
+18 143
+21 161
+25 209
+28 247
+;
+
+*	Goal:  Plot the tumor volume by time (Day)   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS;
+	RUN;
+
+*	Note:  The x-axis vaues don't match the values for 'Day'
+			These values can be displayed using the DATALABEL option
+			However, it may look better to customize the x-axis (next section!)   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS
+			DATALABEL	= Day;
+	RUN;
+
+
+
+
+*	SECTION 5.3.4 - SPECIFYING FIGURE ATTRIBUTES   *; RUN;
+
+*	Note:  Units for the SIZE= and THICKNESS= options are PX (default) IN CM MM PCT and PT   *;
+
+
+*	Illustration 1 - XAXIS, YAXIS, and REFLINE Statements and Options   *; RUN;
+
+*	Multiple REFLINE statements may be specified, and multiple values may
+		be specified for each statement   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+
+	* This places the reference line BEHIND the time series plot *;
+	REFLINE	126
+		/	AXIS		= Y
+			LABEL		= 'Tumor Doubling Threshold'
+			LABELLOC	= INSIDE
+			LABELPOS	= MIN;
+
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS;
+
+	XAXIS	VALUES		= (	0 4 7 11 14 18 21 25 28	)
+			OFFSETMIN	= 0 /* Specifies the proportion of the entire line to appear left of the minimum value */
+			LABEL		= 'Day of Tumor Measurement';
+
+	YAXIS	VALUES		= (	0 TO 300 BY 50	)
+			OFFSETMIN	= 0
+			LABEL		= 'Tumor Volume (mm^3)'
+			GRID;
+
+	RUN;
+
+
+*	Illustration 2 - Label and Value Attributes   *; RUN;
+
+*	Attributes are specified using "[component]ATTRS" options
+	Goal:  Customize the x-axis label   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS;
+
+	XAXIS	VALUES		= (	0 4 7 11 14 18 21 25 28	)
+			VALUEATTRS	= (	SIZE	= 9 PT
+							WEIGHT	= BOLD
+							STYLE	= ITALIC
+							COLOR	= GREEN	)
+			LABEL		= 'Day of Tumor Measurement'
+			LABELATTRS	= (	SIZE	= 9 PT
+							WEIGHT	= BOLD
+							STYLE	= ITALIC
+							COLOR	= BLUE	);
+
+	RUN;
+
+
+*	Illustration 3 - Line Attributes   *; RUN;
+
+*	Goal:  Customize the series plot and reference lines   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+
+	REFLINE	126
+		/	AXIS		= Y
+			LINEATTRS	= (	COLOR		= RED
+							PATTERN		= SHORTDASH	)
+			TRANSPARENCY= 0.5
+			LABEL		= 'Tumor Doubling Threshold'
+			LABELLOC	= INSIDE;
+
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS
+			LINEATTRS	= (	COLOR		= PURPLE
+							THICKNESS	= 2		)	;
+
+	RUN;
+
+
+*	Illustration 4 - Marker Attributes   *; RUN;
+
+*	Goal:  Customize the series plot markers   *;
+PROC SGPLOT DATA = WORK.TumorVol;
+
+	SERIES	X	= Day
+			Y	= Volume
+		/	MARKERS
+			MARKERATTRS	= (	SYMBOL	= CIRCLEFILLED
+							SIZE	= 10 PX
+							COLOR	= PURPLE)
+			LINEATTRS	= (	COLOR		= PURPLE
+							THICKNESS	= 2		)	;
+
+	RUN;
+
+
+*	Illustration 5 - Specifying Fill-Color(s)   *; RUN;
+
+*	Specifying color for a figure with a single group   *;
+PROC SGPLOT DATA = WORK.HCT;
+	HISTOGRAM	LabVal	
+		/	BINWIDTH	= 2.5
+			SHOWBINS
+			FILLATTRS	= (	COLOR	= LIGHTORANGE);
+	RUN;
+
+*	Use the STYLEATTRS statement to specify colors for a figure
+		with a multiple groups   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	EthRaceCd	/	GROUP			= SexCd
+							GROUPDISPLAY	= CLUSTER;
+	STYLEATTRS	DATACOLORS			= (	GREEN LIGHTGREEN	)
+				DATACONTRASTCOLORS	= (	BLACK GRAY	);
+	RUN;
+
+
+*	Illustration 6 - Legends and Insets   *; RUN;
+
+*	Goal:  Include an inset inside the figure
+
+	When the GROUP= option is used, a legend is automatically created.
+		Specifying NOAUTOLEGEND in the PROC SGPLOT statement will remove the legend   *;
+PROC SGPLOT DATA = CanTabs.Labs;
+	WHERE	LabTest = 'Hematocrit';
+	VBOX	LabVal	/	GROUP = SubjID;
+	RUN;
+
+*	Changing the legend attribute specifications   *;
+PROC SGPLOT DATA = CanTabs.Labs;
+	WHERE	LabTest = 'Hematocrit';
+	VBOX	LabVal	/	GROUP = SubjID;
+
+	KEYLEGEND
+		/	ACROSS	= 3
+			DOWN	= 6
+			LOCATION	= INSIDE
+			POSITION	= BOTTOMRIGHT
+			NOBORDER;
+
+	LABEL	SubjID	= 'Cancer RCT Subjects'; * This is displayed in the legend *;
+
+	RUN;
+
+*	Including an inset   *;
+PROC SGPLOT DATA = CanTabs.Labs;
+	WHERE	LabTest = 'Hematocrit';
+	VBOX	LabVal	/	GROUP = SubjID;
+
+	KEYLEGEND
+		/	ACROSS	= 3
+			DOWN	= 6
+			LOCATION	= INSIDE
+			POSITION	= BOTTOMRIGHT
+			NOBORDER;
+
+	LABEL	SubjID	= 'Cancer RCT Subjects';
+
+	INSET	'Data displayed are from' 'the CanTabs.Labs data set.'
+		/	POSITION	= TOPLEFT
+			BORDER
+			TITLE = 'Source:'
+			TITLEATTRS	= (	SIZE	= 9 PT
+							WEIGHT	= BOLD
+							COLOR	= GREEN	)
+			TEXTATTRS	= (	SIZE	= 8 PT
+							STYLE	= ITALIC
+							COLOR	= BLUE	);
+
+	RUN;
+
+
+*	Illustration 7 - Putting It All Together!   *; RUN;
+
+*	Creating data for the illustration   *;
+PROC FORMAT;
+	VALUE	$GrpNm
+				'Ctl'	= 'Control'
+				'Tx'	= 'Treatment';
+	RUN;
+
+DATA	WORK.GrpTumorVol;
+	INFILE	DATALINES;
+	INPUT	Grp	$	Day	Volume;
+	FORMAT	Grp $GrpNm.;
+	DATALINES;
+Ctl 0  63
+Ctl 4  73
+Ctl 7  88
+Ctl 11 104
+Ctl 14 120
+Ctl 18 143
+Ctl 21 161
+Ctl 25 209
+Ctl 28 247
+Tx  0  66
+Tx  4  81
+Tx  7  87
+Tx  11 86
+Tx  14 81
+Tx  18 80
+Tx  21 83
+Tx  25 95
+Tx  28 116
+;
+
+
+TITLE1	"Growth Curves of Patient-Derived Tumor Xenograft Models";
+PROC SGPLOT
+		DATA	= WORK.GrpTumorVol;
+
+	REFLINE	126
+		/	AXIS		= Y
+			LINEATTRS	= (	COLOR		= RED
+							PATTERN		= SHORTDASH	)
+			TRANSPARENCY= 0.5
+			LABEL		= 'Tumor Doubling Threshold'
+			LABELLOC	= INSIDE
+			LABELPOS	= MAX;
+
+	STYLEATTRS	DATACONTRASTCOLORS	= (	PURPLE MEDIUMBLUE	);
+
+	SERIES	X	= Day
+			Y	= Volume
+		/	GROUP		= Grp
+			MARKERS
+			MARKERATTRS	= (	SYMBOL	= CIRCLEFILLED
+							SIZE	= 10 PX);
+
+	XAXIS	VALUES		= (	0 4 7 11 14 18 21 25 28	)
+			OFFSETMIN	= 0
+			LABEL		= 'Day of Tumor Measurement'
+			LABELATTRS	= (	WEIGHT	= BOLD	);
+
+	YAXIS	VALUES		= (	0 TO 300 BY 50	)
+			OFFSETMIN	= 0
+			LABEL		= 'Tumor Volume'
+			GRID
+			LABELATTRS	= (	WEIGHT	= BOLD	);
+
+	KEYLEGEND	/	NOBORDER;
+
+	LABEL	Grp	= 'Trial Group:';
+
+	INSET	'CRC 006   CRC 061'
+			'CRC 020   CRC 077'
+			'CRC 027   CRC 098'
+			'CRC 048   CRC 120'
+		/	POSITION	= TOPLEFT
+			BORDER
+			TITLE = 'CRC Models Used:'
+			TITLEATTRS	= (	WEIGHT	= BOLD	);
+
+	RUN;
+TITLE;
+
+
+
+
+*	SECTION 5.3.5 - MULTIPLE (3+) VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Box-Plots with 2 Categorical Variables   *; RUN;
+
+*	Note:  This adds a GROUP variable (TxNm) to the earlier illustration   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBOX	LesionRatio	/	CATEGORY	= SexCd
+							GROUP		= TxNm;
+	RUN;
+
+
+*	Illustration 2 - Bar Chart of a Summary Statistic by Level of a Categorical Variable   *; RUN;
+
+*	Goal:  Display results by Sex within TxNm   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	VBAR	TxNm	/	GROUP			= SexCd
+						GROUPDISPLAY	= CLUSTER
+						RESPONSE		= LesionRatio
+						STAT			= MEAN;
+	RUN;
+
+
+*	Illustration 3 - Scatterplots Labeled with a Character Variables   *; RUN;
+
+*	Goal:  Identify the subject for each plotted marker   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	SCATTER	X	= AgeAtEnroll
+			Y	= LesionRatio
+		/	DATALABEL	= SubjID;
+	RUN;
+
+
+*	Illustration 4 - Scatterplots with a Grouping Variable   *; RUN;
+
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	SCATTER	X	= AgeAtEnroll
+			Y	= LesionRatio
+		/	GROUP	= SexCd;
+	RUN;
+
+
+*	Illustration 5 - Bubble Plots   *; RUN;
+
+*	A bubble plot is an extension of a scatter plot
+	The size of the marker (i.e. the bubble) is in proportion to the value of a variable
+		(this variable is specified with SIZE=)   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	BUBBLE	X	= AECnt
+			Y	= LesionRatio
+			SIZE= AgeAtEnroll
+		/	GROUP	= SexCd;
+	RUN;
+
+
+*	Illustration 6 - Series Plots with a Group Variable   *; RUN;
+
+*	This is the simplified version of the figure at the end of Section 4   *;
+PROC SGPLOT
+		DATA	= WORK.GrpTumorVol;
+	SERIES	X	= Day
+			Y	= Volume
+		/	GROUP	= Grp
+			MARKERS;
+	RUN;
+
+
+*	Illustration 7 - Matrix of Scatterplots   *; RUN;
+
+*	Goal:  Create scatterplots for each pair from multiple continuous variables   *;
+PROC SGSCATTER DATA = CanAnl.CanAnalysis1;
+	MATRIX	ScanIntvlWks LesionSumCmMon0 LesionSumCmMon6 LesionRatio AgeAtEnroll;
+	RUN;
+
+*	Note:  Histograms (and density curves) may be created for each variable
+		along the diagonal of the matrix   *;
+PROC SGSCATTER DATA = CanAnl.CanAnalysis1;
+	MATRIX	ScanIntvlWks LesionSumCmMon0 LesionSumCmMon6 LesionRatio AgeAtEnroll
+		/	DIAGONAL	= (	HISTOGRAM NORMAL KERNEL	)
+			GROUP		= TxNm
+			ELLIPSE;
+	RUN;
+
+
+
+
+*	SECTION 5.3.6 - ADDITIONAL MATERIAL   *; RUN;
+
+*	None   *;
+
+
+
+
+*	SECTION 5.3.7 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.3.1   |
+* ----------------------------- *
+	Task:  Create a histogram of the 'WBCVal' variable from the WORK.WBC data set
+			The histogram should:
+			1)	Have bins with a width of 1
+			2)	Have a bin for each integer (e.g. from 5-6, 6-7, 7-8, etc)
+			3)	Display the midpoint of each bin on the X axis
+			4)	Show the PROPORTION on the Y axis
+			5)	Show the count on top of each bin   *;
+PROC SGPLOT DATA = WORK.WBC;
+	HISTOGRAM	WBCVal	/	BINWIDTH	= 1
+							BINSTART	= 5.5
+							SHOWBINS
+							SCALE		= PROPORTION
+							DATALABEL	= COUNT;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 5.3.2   |
+* ----------------------------- *
+	Task:  Create a horizontal bar chart with 1 bar for each value of 'MaxGrade'
+			The bar chart should:
+			1)	Have a length equal to the average age for the subjects who are
+					in each bar (use 'AgeAtEnroll')
+			2)	Display the confidence limits of the mean - I did this you :)   *;
+PROC SGPLOT DATA = CanAnl.CanAnalysis1;
+	HBAR	MaxGrade	/	STAT		= MEAN
+							RESPONSE	= AgeAtEnroll
+							LIMITSTAT	= CLM
+							LIMITS		= BOTH;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
