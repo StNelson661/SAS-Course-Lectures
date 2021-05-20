@@ -1,0 +1,955 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	2.4 - Importing Delimited Raw Data.sas                                  *
+*	PURPOSE:	Illustrate material in Chapter 2.4                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-07-30																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	Address.txt, DM.csv, Instream                                           *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-11  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-12  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 2.4.1 - Importing Delimited Data                                        *
+*   	Section 2.4.2 - Additional Material                                             *
+*   	Section 2.4.3 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the first %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 2.4.1 - IMPORTING DELIMITED DATA   *; RUN;
+
+
+*	The "List Input" input style is used to read in delimited data (both standard and non-standard)
+	When columns (XX-YY) or absolute column pointers (@XX) aren't used, SAS uses List Input,
+		which assumes the data are delimited and that the delimiter is a space   *;
+
+
+*	Illustration 1 - Simplest Case of Importing Delimited Data   *; RUN;
+
+*	Look at the structure of the data to determine if the data are delimited!
+	Recall that for every variable, we need to provide it's
+		1) Name, 2) Type, and 3) Location
+
+	In the INPUT statement, for every variable to be imported:
+	1)	Specify the variable name(s) of your choice!
+	2)	Designate a character variable by following the name with a $ sign
+	3)	Columns are not specified because with delimited data a column may contain different values
+
+	By default:
+		The pointer is at position 1
+		SAS will scan the record (from left to right) assuming characters between spaces (the default delimiter)
+			 make up the value for each variable in the order listed   *;
+	
+*	Note:  Column and Formatted Input Won't Work   *; RUN;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID			1-3
+			Middle	$	5-11
+			GENDER	$	13-16;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+001 WILLIAM MALE
+002 RANDALL MALE
+003 JO FEMALE
+;
+*	Note:  There are no ERROR messages   *;
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Using List Input   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID		
+			Middle	$
+			GENDER	$;
+	DATALINES;
+001 WILLIAM MALE
+002 RANDALL MALE
+003 JO FEMALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Additional Factors to Consider:
+		A - Determining How Values Are Separated 
+		B - Variable Type
+		C - Character Values with Embedded Spaces
+		D - Importing a Subset of Variables
+		E - Records Shorter than SAS Is Expecting
+		F - Length of Character Variables
+		G - Missing Values
+		H - Reading Non-Standard Data   *; RUN;
+
+
+
+*	Consideration A - Determining How Values Are Separated   *; RUN;
+
+
+*	Illustration A.1 - Specifying the Delimiter   *; RUN;
+
+*	When the delimiter is not a space, it must be specified using the DELIMITER option
+	The delimiter is a property of the data set (i.e. not variables),
+		so is in the INFILE statement   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ','; * Alias is 'DLM' *;
+	INPUT	ID
+			First		$
+			Middle		$
+			Last		$
+			Street_Num	;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Notice the results when the delimiter is not specified   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv";
+	INPUT	ID
+			First	$;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration A.2 - The Delimiter May Be Any Character   *; RUN;
+
+*	Note:  Now SAS will read until it reaches an 'A', then start the next variable   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = 'A';
+	INPUT	Vbl1	$
+			Vbl2	$;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration A.3 - Multiple Charaters May Be Delimiters   *; RUN;
+
+*	Note:  Each character within the quotation marks is considered to be a delimiter   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = '+|';
+	INPUT	ID
+			First		$
+			Middle		$;
+	DATALINES;
+001|JAMES+WILLIAM
+002|FRED+RANDALL
+003|ELIZABETH+JO
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Note:  If the space is one of the delimiters, it must still be listed (even though it's the default)
+	This approach is used throughout SAS when a default behavior is modified!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = '+ ';
+	INPUT	ID
+			First		$
+			Middle		$;
+	DATALINES;
+001 JAMES+WILLIAM
+002 FRED+RANDALL
+003 ELIZABETH+JO
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration A.4 - Use the DLMSTR Option When Delimiters Are Composed of Multiple Characters   *; RUN;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DLMSTR = '||';
+	INPUT	ID
+			First		$
+			Middle		$;
+	DATALINES;
+001||JAMES||WILLIAM
+002||FRED||RANDALL
+003||ELIZABETH||JO
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration B - Variable Type   *; RUN;
+
+*	No differences with column-aligned data   *;
+
+
+
+*	Consideration C - Character Values with Embedded Spaces   *; RUN;
+
+
+*	Illustration C.1 - Errors Can Occur When the Delimiter Is Contained In a Value   *; RUN;
+
+*	This is typical when the delimiter is a space and character values contain embedded spaces   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			DeathYr	$; * DeathYr read as a character variable for illustration only *;
+	DATALINES;
+van Gogh 1890
+Picasso 1973
+da Vinci 1519
+;
+*	NB:  No ERROR message was written to the log   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration C.2 - When Expecting Numerals, Characters Can Cause Errors   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = ' '	DSD;
+	INPUT	Name	$
+			DeathYr	;
+	DATALINES;
+van Gogh 1890
+Picasso 1973
+da Vinci 1519
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration C.3 - It is Still Possible To Read In the Data   *; RUN;
+
+*	The delimiter character may be part of an actual data value if the data value is
+		enclosed in quotation marks
+	The DSD option is covered more in Consideration G   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = ' '	DSD;
+	INPUT	Name	$
+			DeathYr	;
+	DATALINES;
+"van Gogh" 1890
+Picasso 1973
+"da Vinci" 1519
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration C.4 - Using the & Modifier   *; RUN;
+
+*	The & character indicates that a character value that is read using List Input might
+		contain 1 or more single embedded blanks
+	The value is read until 2 or more consecutive blanks are encountered   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = ' '	DSD;
+	INPUT	Name		$ &
+			DeathYr	;
+	DATALINES;
+van Gogh  1890
+Picasso  1973
+da Vinci  1519
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration D - Importing a Subset of Variables   *; RUN;
+
+
+*	Illustration D.1 - All Variables Prior to (i.e. left of) the Last Desired Variable Must Be Read   *; RUN;
+
+*	Example:  If only the Street_Num value is desired, all prior variables must be read   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ',';
+	INPUT	ID
+			First		$
+			Middle		$
+			Last		$
+			Street_Num;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Note:  Although they must be read, good specification of the unwanted variables is not required   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ',';
+	INPUT	a $	b $ c $ d $
+			Street_Num	;
+	KEEP	Street_Num;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration E - Records Shorter than SAS Is Expecting   *; RUN;
+
+
+*	Illustration E.1 - Values For an Observation "Spilling" to Another Record   *; RUN;
+
+*	NB:  When SAS does not find values for all of the variables listed in the INPUT statement,
+		SAS will load another record into the Input Buffer to fill variables in the PDV!
+	Check the read count and the write count!   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ',';
+	INPUT	ID
+			First		$
+			Middle		$
+			Last		$
+			Street_Num
+			Street_Name	$
+			Zip
+			HOME		$
+			CELL		$	;
+	RUN;
+*	Notice the value of CELL for observation 1   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration E.2 - Using the MISSOVER or TRUNCOVER Options   *; RUN;
+
+*	MISSOVER and TRUNCOVER instruct SAS to not load a new record if variable(s) remain un-filled   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ','	MISSOVER;
+	INPUT	ID
+			First		$
+			Middle		$
+			Last		$
+			Street_Num
+			Street_Name	$
+			Zip
+			HOME		$
+			CELL		$	;
+	RUN;
+*	Notice that now there are 11 observations because SAS did not load the following record when it
+		encountered a missing value for an expected variable   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration F - Length of Variables   *; RUN;
+
+
+*	Illustration F.1 - The Default Length of Character Variables is 8 Bytes   *; RUN;
+
+*	Notice the character values of First, Last, Street_Name, HOME, and CELL in the previous example   *;
+
+
+*	Illustration F.2 - Using the LENGTH statement to specify variable(s) length   *; RUN;
+
+*	Note:  The LENGTH statement must be placed BEFORE the INPUT statement!
+	Recall:  Slots are created in the PDV for variables in the order they are encountered in the program!   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ','	MISSOVER;
+	LENGTH	First		$	9
+			Last		$	13
+			Street_Name	$	30
+			HOME		$	14
+			CELL		$	12	;
+	INPUT	ID
+			First
+			Middle		$
+			Last
+			Street_Num
+			Street_Name
+			Zip
+			HOME
+			CELL		;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	A few things to point out ...
+	1)	Notice that the character variables contain the full values.
+	2)	The order of variables in the PDV is established by the order in which SAS encounters the variables.
+		Therefore, the order of variables may be different than in the source file.
+			This could be "fixed" by listing all variables in the LENGTH statement (more typing!).
+			There is a better way (coming soon).
+	3)	The $ signs are not needed in the INPUT statement since the variables have been established as
+			character variables when SAS commpiled the LENGTH statement   *;
+
+
+*	Illustration F.3 - The Default Length of Numeric Variables is 8 Bytes   *; RUN;
+
+*	Recall:  Length is defined in bytes of storage
+	NB:  This does NOT limit the length of numeric variables to 8 spaces!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Age
+			NetWorth	;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+25 123456789012
+70 123456789.01
+;
+*	Check the length of these numeric variables   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration G - Missing Values   *; RUN;
+
+
+*	Illustration G.1 - Periods Are Used to Designate Missing Values in List Input   *; RUN;
+
+*	Note:  Using periods will help prevent SAS from loading the next record into the Input Buffer!
+	Using List Input   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID		
+			Middle	$
+			GENDER	$;
+	DATALINES;
+001 WILLIAM .
+. RANDALL MALE
+003 . FEMALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.2 - Not Designating Values as Missing    *; RUN;
+
+*	By default, SAS loads the next record into the Input Buffer when it doesn't find values
+		for all variables named on the INPUT statement
+	Therefore, not using periods can result in SAS loading the next record
+	Note:  Not enough data to fill the PDV will result in a LOST CARD note   *; RUN;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	ID		
+			Middle	$
+			GENDER	$;
+	DATALINES;
+001 WILLIAM 
+ RANDALL MALE
+003 FEMALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*LOST CARD NOTE IN LOG MEANS ITS MISSING VALUES*;
+
+*	Illustration G.3 - Possible Solution for Missing Values   *; RUN;
+
+*	An alternative is to ensure there is a space before each delimiter
+	This is only possible if the delimiter is not a space
+	This is not often the case when importing "real" data   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER='*';
+	INPUT	ID		
+			Middle	$
+			GENDER	$;
+	DATALINES;
+001*WILLIAM*
+ *RANDALL*MALE
+003* *FEMALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.4 - SAS By Default Treats Consecutive Delimiters As a Single Delimiter     *; RUN;
+
+*	Note that whether it doesn't matter how many delimiters are used--consecutive delimiters
+		are interpreted as a single delimiter   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER='*';
+	INPUT	ID		
+			Middle	$
+			GENDER	$;
+	DATALINES;
+001*****WILLIAM**
+ *RANDALL**********MALE
+003*** ***FEMALE
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.5 - Using the DSD Option   *; RUN;
+
+*	Most often, the convention used with delimited data is that consecutive delimiters designate missing value(s)
+	DSD stands for "Delimiter-Sensitive Data"
+	The DSD option performs 3 functions:
+	1)	Creates a missing value when consecutive delimiters are encountered
+	2)	Makes the comma the default delimiter (so DLM=',' does not need to be specified)
+	3)	It allows the delimiter to be part of a value if it's contained within quotes (see Illustration C.3)   *;
+DATA	WORK.Illus;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ','	MISSOVER	DSD;
+	INPUT	ID
+			First		$
+			Middle		$
+			Last		$
+			Street_Num
+			Street_Name	$
+			Zip
+			HOME		$
+			CELL		$	;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.6 - Using ?? Informat to Suppress ERROR Messages   *; RUN;
+
+*	When errors are expected in the data (as below) we may not want an ERROR message
+		generated in the log window every time -- the ?? informat will suppress those messages   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			PayRate	??	;
+	DATALINES;
+Allie 12.50
+Bob NA
+Chris 9.25
+Dina n/a
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration G.7 - Blank rows between 'DATALINES' and semicolon will not result in blank observations   *; RUN;
+*	Recall:  By default with List Input, SAS will continue loading records until it finds data to fill the variables.
+			Using the MISSOVER option would create 6 records   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			Sex		$
+			Age		;
+	DATALINES;
+
+Allie F 38
+
+
+Bob M 51
+
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+*	Consideration H - Reading Non-Standard Data   *; RUN;
+
+
+*	Illustration H.1 - Informats Are Needed (just as with column-aligned data)   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Last	$
+			DOB		MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+MCLAUGHLIN 12/26/1959
+HARRIS 6/9/1936
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Illustration H.2 - Non-Standard Data of Different Lengths Can Cause Problems   *; RUN;
+
+*	Note that now I'm reading the date first, but the dates are of different lengths   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	DOB		MMDDYY10.
+			Last	$		;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+12/26/1959 MCLAUGHLIN
+6/9/1936 HARRIS
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Illustration H.3 - Not Specifying the Length in the Informat Can Also Cause Problems   *; RUN;
+
+*	If a length is not specified, the default length is used
+	The default length for the MMDDYY. informat is 6 characters, so even though we get a data
+		for HARRIS it is incorrect!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	DOB		MMDDYY.
+			Last	$		;
+	DATALINES;
+12/26/1959 MCLAUGHLIN
+6/9/1936 HARRIS
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+*	NB:  There won't be an error message below, but the date is still incorrect   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	DOB		MMDDYY.
+			Last	$		;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+12261959 MCLAUGHLIN
+6/9/1936 HARRIS
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Illustration H.4 - Using Modified List Input (Informats with the Colon Format Modifier)   *; RUN;
+
+*	Note:	In H.2 we used an informat with a length and had wrong results
+			In H.3 we used an informat without a length and had wrong results
+	Solution:	Use an informat with a length AND use the Colon Format Modifier!
+	The Colon Format Modifier instructs SAS to read the specified number of characters unless
+		a delimiter is encountered first!
+	It is great practice to use this when importing delimited character or non-standard data!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	DOB		:MMDDYY10.
+			Last	$		;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+12/26/1959 MCLAUGHLIN
+6/9/1936 HARRIS
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Illustration H.5 - Using the Colon Format Modifier with Character Values   *; RUN;
+
+*	The Colon Format Modifier can also be used with standard character data
+	This enables us to establish the length of character variables in the INPUT statement
+		Therefore we don't need to re-type each variable name in a LENGTH statement!
+	First, check the results when the Colon Format Modifier is not used   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Last	$10.
+			DOB		:MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+MCLAUGHLIN 12/26/1959
+HARRIS 6/9/1936
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Now, simply add the Colon Format Modifier   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Last	:$10.
+			DOB		:MMDDYY10.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+MCLAUGHLIN 12/26/1959
+HARRIS 6/9/1936
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB	WORDDATE.;
+	RUN;
+
+
+*	Illustration H.6 - Applying the Same Informat to Multiple Variables   *; RUN;
+
+*	When you'd like to use the same informat for multiple variables, you may enclose those variables
+		in parentheses followed by the informat in parentheses (so you won't have to
+		write the informat over-and-over again!   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT	Last :$10.
+			(DOB DeathDt) (:MMDDYY10.);
+	DATALINES;
+MCLAUGHLIN 12/26/1959 10/14/2013
+HARRIS 6/9/1936 1/30/2008
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	DOB DeathDt	WORDDATE.;
+	RUN;
+
+
+
+*	Task:  Import the Data In the Address.csv File Into a SAS Data Set in the 'CanImpt' Library; RUN;
+DATA	CanImpt.Address;
+	INFILE	"&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"	DELIMITER = ','	MISSOVER	DSD;
+	INPUT	ID			:$3.
+			First		:$10.
+			Middle		:$10.
+			Last		:$20.
+			Street_Num
+			Street_Name	:$30.
+			Zip
+			HOME		:$14.
+			CELL		:$12.	;
+	RUN;
+
+PROC PRINT DATA = CanImpt.Address;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.4.1   |
+* ----------------------------- *
+	Task:  Modify the INFILE and INPUT statements to successfully read the in-stream data
+			below to create the variables 'FirstNm', 'LastNm', 'HireDt', and 'Salary'   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER= '|'	DSD MISSOVER ;
+	INPUT	FirstNm	:$8.
+			LastNm	:$10.
+			HireDt	:DATE9.
+			Salary	:DOLLAR8.	;
+	FORMAT	HireDt	WORDDATE.;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+John|Smith|1SEP13
+Brittany|Huntington|20FEB1999|$108,250
+Taylor|Smith||$61,945
+;
+
+
+
+
+*	SECTION 2.4.2 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - Using Named Input   *; RUN;
+
+*	Named Input is used when the input data records contain a variable name followed by
+		an equal sign and a value for the variable   *;
+DATA	WORK.Illus;
+	INPUT	ID=
+			First=		:$9.
+			Middle=		$;
+	DATALINES;
+ID=001 First=JAMES Middle=WILLIAM
+ID=002 First=FRED Middle=RANDALL
+ID=003 First=ELIZABETH Middle=JO
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Using PROC IMPORT To Import a Delimited Raw Data File   *; RUN;
+
+*	PROC IMPORT code may be used to read in a delimited file
+	Specify the DBMS=DLM option and specify the delimiter using the DELIMITER= statement   *;
+PROC IMPORT
+		DATAFILE	= "&CourseRoot/Cancer RCT/Data/1_Source/Address.csv"
+		OUT			= WORK.Illus
+		REPLACE
+		DBMS		= DLM;
+	DELIMITER	= ',';
+	GETNAMES	= NO; * NB:  Use this if the file doesn't have a header row (specify "YES" if it does)! *;
+	RUN;
+*	Caution:  A raw file padded with extra spaces can lead to extra unnecessary variables (1 vbl per space)
+	Notice that variable names 'VAR1', 'VAR2', etc are used by default
+		That information is specified in the INPUT statement which is not being written!
+	Also notice the DATA step code that is written to the log window   *;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Input Styles May Be Mixed   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT		FirstNm					:$10.		/* Modified List Input */
+				MiddleNm	$						/* List Input */
+				LastNm		$						/* List Input */
+			@25	Address		$	25-46				/* Column Input */
+			@49	City					$10.		/* Formatted Input */
+			@61	StateCd		$						/* List Input */
+			@65	ZipCd		$						/* List Input */
+			@73	BirthDt					MMDDYY10.	/* Formatted Input */	;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6    6    7    7    8    8
+1---5----0----5----0----5----0----5----0----5----0----5----0----5----0----5----0----5;
+	DATALINES;
+Alexandria A. Allison   11 N Main St            Anchorage   AK  99501   11/12/1980
+Bob B. Bennett          12345 E Principal Pkwy  Birmingham  AL  35201   6/7/67
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Extension: Create Different Variables for Street Number and Address   *; RUN;
+
+DATA	WORK.Illus;
+	INFILE	DATALINES;
+	INPUT		FirstNm					:$10.		/* Modified List Input */
+				MiddleNm	$						/* List Input */
+				LastNm		$						/* List Input */
+			@25	StreetNum				:5.			/* Modified List Input */
+				Address					$18.		/* Formatted Input */
+			@49	City					$10.		/* Formatted Input */
+			@61	StateCd		$						/* List Input */
+			@65	ZipCd		$						/* List Input */
+			@73	BirthDt					MMDDYY10.	/* Formatted Input */	;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6    6    7    7    8    8
+1---5----0----5----0----5----0----5----0----5----0----5----0----5----0----5----0----5;
+	DATALINES;
+Alexandria A. Allison   11 N Main St            Anchorage   AK  99501   11/12/1980
+Bob B. Bennett          12345 E Principal Pkwy  Birmingham  AL  35201   6/7/67
+;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 5 - Using the Import Wizard   *; RUN;
+
+*	In the Windowing Environment, data may be imported using the Import Wizard
+	Note:  The SAS code generated behind-the-scenes may be saved in a file!
+	No code for this subsection   *;
+
+
+*	Illustration 6 - Creating a Delimited Export Raw Data File   *; RUN;
+
+*	Goal:  Create a text file (.txt) containing the NJCC demographic data   *;
+DATA	_NULL_;
+	SET	CanImpt.Address;
+	FILE	"&CourseRoot/Cancer RCT/Data/Address Export.dat"	DLM='|' DSD;
+	PUT		ID Last First Middle Last Street_Num Street_Name Zip HOME CELL;
+	RUN;
+*	Notice:
+	1)	The file we created is delimited simply b/c of the DLM= option
+	2)	If the DSD option weren't specified there would be a space for missing values   *;
+
+
+*	Illustration 7 - Exporting Data Using the FILENAME Statement   *; RUN;
+
+*	We could also use a FILENAME statement
+	The FILENAME statement associates a fileref with an external file or folder
+	In this illustration the fileref 'CanOut' is associated with a folder   *;
+FILENAME	CanOut	"&CourseRoot/Cancer RCT/Data";
+
+DATA	_NULL_;
+	SET	CanImpt.Address;
+	FILE	CanOut(Address Export Using FILENAME.dat)	DLM='|' DSD;
+	PUT		ID Last First Middle Last Street_Num Street_Name Zip HOME CELL;
+	RUN;
+
+FILENAME	CanOut	CLEAR;
+
+
+*	Illustration 8 - Associating the FILENAME Statement to a File   *; RUN;
+
+*	Note:  This has also been changed to create a CSV file   *;
+FILENAME	AddrOut	"&CourseRoot/Cancer RCT/Data/Address Export Using FILENAME.csv";
+
+DATA	_NULL_;
+	SET	CanImpt.Address;
+	FILE	AddrOut	DSD;
+	PUT		ID Last First Middle Last Street_Num Street_Name Zip HOME CELL;
+	RUN;
+
+FILENAME	AddrOut	CLEAR;
+
+
+*	Illustration 9 - Using PROC EXPORT to Create a CSV File   *; RUN;
+PROC EXPORT
+		DATA	= CanImpt.Address
+		OUTFILE	= "&CourseRoot/Cancer RCT/Data/Address Export Using PROC EXPORT.csv" 
+		DBMS	= CSV
+		LABEL
+		REPLACE	;
+	RUN;
+
+
+
+
+*	SECTION 2.4.3 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 2.4.1   |
+* ----------------------------- *
+	Task:  Modify the INFILE and INPUT statements to successfully read the in-stream data
+			below to create the variables 'FirstNm', 'LastNm', 'HireDt', and 'Salary'   *;
+DATA	WORK.Illus;
+	INFILE	DATALINES	DELIMITER = '|' DSD MISSOVER;
+	INPUT	FirstNm	:$8.
+			LastNm	:$10.
+			HireDt	:DATE9.
+			Salary	DOLLAR8.	;
+* Ruler  1    1    2    2    3    3    4    4    5    5    6
+1---5----0----5----0----5----0----5----0----5----0----5----0;
+	DATALINES;
+John|Smith|1SEP13
+Brittany|Huntington|20FEB1999|$108,250
+Taylor|Smith||$61,945
+;
+
+PROC PRINT DATA = WORK.Illus;
+	FORMAT	HireDt WORDDATE. Salary DOLLAR8.;
+	RUN;
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
