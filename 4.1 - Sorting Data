@@ -1,0 +1,521 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	4.1 - Sorting Data.sas                                                  *
+*	PURPOSE:	Illustrate material in Chapter 4.1                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-10-25																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	Instream                                                                *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-10-20  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-23  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 4.1.0 - Preliminaries                                                   *
+*   	Section 4.1.1 - Basic Sorts                                                     *
+*   	Section 4.1.2 - Changing the Sort Order for Character Data                      *
+*   	Section 4.1.3 - Removing Duplicates                                             *
+*   	Section 4.1.4 - Additional Material                                             *
+*   	Section 4.1.5 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 4.1.0 - PRELIMINARIES   *; RUN;
+
+*	NB:  By default, SAS over-writes the data set that is sorted
+	Therefore, create a copy of a data set to work with when 'experimenting'
+		with the data so you don't over-write source data!
+
+	Creating a temporary data set 'Labs' to use for illustrations
+	Note that the data is sorted by the variable 'Lab_Date'   *;
+DATA	WORK.Labs;
+	SET	CanImpt.Laboratory_2015;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+
+
+
+*	SECTION 4.1.1 - BASIC SORTS   *; RUN;
+
+
+*	Illustration 1 - Using PROC SORT   *; RUN;
+
+*	PROC SORT is used to sort a SAS data set
+	The sort order is specified in the BY statement
+		The BY statement is required only for the SORT procedure
+		(it is an optional statement on most other procedures)
+	The default order is ascending order for the BY variable(s)   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Subject_ID;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+*	Note:  Missing values are ordered before non-missing values (when using ascending order)   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Lab_Value;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+
+*	Illustration 2 - Sorting by Multiple Variables    *; RUN;
+
+*	Variables in the BY statement are referred to as "BY variables"
+
+	NB:  The 1st variable in the BY statement is the first priority in the sort order
+		The 2nd variable ONLY affects observations which have identical
+			values of the 1st variable!
+	So typically if multiple variables are specified then the first tend to be
+		classification or "grouping" variables   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Lab_Test Subject_ID;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+*	Example using 3 BY-variables   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Lab_Test Subject_ID Lab_Date;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+
+*	Illustration 3 - Sorting In Descending Order    *; RUN;
+
+*	The BY statement option "DESCENDING" must PRECEDE the desired sort variable   *;
+PROC SORT DATA	= WORK.Labs;
+	BY	DESCENDING Lab_Value;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+
+*	Illustration 4 - DESCENDING Only Applies to the 1 Next Following Variable    *; RUN;
+
+PROC SORT DATA	= WORK.Labs;
+	BY	DESCENDING Lab_Test Lab_Value; * Note:  Lab_Values are in ascending order *;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+
+	*	Goal:  Sort by descending 'Lab_Value' within descending 'Lab_Test'   *; 
+PROC SORT DATA	= WORK.Labs;
+	BY	DESCENDING Lab_Test
+		DESCENDING Lab_Value;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	RUN;
+*	Note:  Now check the RED BLOOD CELL COUNT values!   *;
+
+
+*	Illustration 5 - BY-Group Processing    *; RUN;
+
+*	BY-Group processing allows for a separate report to be generated for every value
+		of a specified variable(s)
+	This is accomplished simply by adding a BY statement to the given procedure
+		(instead of repeatedly running the PROC!)
+	When it is desired to process data in BY-groups, the data must first be sorted
+		by those same BY-groups!   *;
+
+*	Goal:  Print the lab data separately by Subject_ID   *;
+PROC PRINT DATA = WORK.Labs;
+	BY	Subject_ID;
+	RUN;
+*	Note:  This data is sorted, but not by the correct variable!   *;
+
+*	First we need to sort the data by 'Subject_ID'   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Subject_ID;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	BY	Subject_ID;
+	RUN;
+
+
+*	Illustration 6 - All BY-Variables Don't Need to Be Used in the Procedure   *; RUN;
+
+*	Goal:  Sort the data by Lab_Test, Subject_ID, and Lab_Date,
+			but use BY-group processing only using Lab_Test   *;
+PROC SORT DATA = WORK.Labs;
+	BY	Lab_Test Subject_ID Lab_Date;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs;
+	BY	Lab_Test;
+	RUN;
+
+
+*	Illustration 7 - Avoid Overwriting by Using the OUT= Option    *; RUN;
+
+*	The OUT= option creates an output data set
+	The data set in the DATA= option is NOT sorted
+	This allows us to sort a permanent data set without over-writing it!   *;
+PROC SORT
+		DATA	= CanImpt.Laboratory_2015
+		OUT		= WORK.Labs2015;
+	BY	Subject_ID Lab_Date;
+	RUN;
+
+PROC PRINT DATA = WORK.Labs2015;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.1.1   |
+* ----------------------------- *
+	The 'CanImpt.AELog' data set contains variables named 'Grade',
+			'AEDescr', and 'OnsetDt' (among others)
+
+	Task:  Create a sorted temporary output data set named 'AEs' which has
+			observations sorted in the following order
+			1) First by 'Grade' in descending order
+			2) Then by 'AEDescr' in ascending order
+			3) Then by 'OnsetDt' in descending order   *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		OUT		= Work.aes;
+	BY	DESCENDING Grade AEDescr DESCENDING OnsetDt;
+	RUN;
+
+PROC PRINT DATA = WORK.AEs;
+	BY 	DESCENDING Grade;
+	ID AEDescr;
+	RUN;
+
+
+
+
+*	SECTION 4.1.2 - CHANGING THE SORT ORDER FOR CHARACTER DATA   *; RUN;
+
+
+*	Creating data to use for the following illustrations
+	Note:  I've made the name "Eamon" lower-case for illustration purposes only!   *;
+DATA	WORK.Olympics;
+	INFILE	DATALINES;
+	INPUT	Event		$	1-20
+			ORHolder	$	21-40
+			Country		$	41-53;
+* Ruler  1    1    2    2    3    3    4    4    5    5
+1---5----0----5----0----5----0----5----0----5----0----5;
+	DATALINES;
+50 m Freestyle      Cesar Cielo         Brazil
+100 m Freestyle     eamon Sullivan      Australia
+200 m Freestyle     Michael Phelps      United States
+400 m Freestyle     Sun Yang            China
+1500 m Freestyle    Sun Yang            China
+;
+
+
+*	Illustration 1 - Using the SORTSEQ Option   *; RUN;
+
+*	By default, upper-case letters sort before lower-case letters
+	Note:  Sorting by strict character values is not always helpful   *;
+PROC SORT
+		DATA	= WORK.Olympics
+		OUT		= WORK.BySwimmer;
+	BY	ORHolder;
+	RUN;
+
+PROC PRINT DATA = WORK.BySwimmer;
+	RUN;
+
+*	The SORTSEQ option can be useful to sort character values ignoring case
+	The SORTSEQ= option has 4 possibilities,
+		1 is LINGUISTIC which specifies linguistic collation which sorts characters in
+			a culturally-sensitive manner according to rules that are associated with
+			a language and locale.   *;
+PROC SORT
+		DATA	= WORK.Olympics
+		OUT		= WORK.BySwimmer
+		SORTSEQ	= LINGUISTIC;
+	BY	ORHolder;
+	RUN;
+
+PROC PRINT DATA = WORK.BySwimmer;
+	RUN;
+*	Recall:  We accomplished a similar task in PROC CONTENTS (Chapter 1.2)
+				(we used the ORDER = IGNORECASE option)   *;
+
+*	The SORTSEQ option has several suboptions which may be used to fine-tune sorting specifications
+		Suboption	Value	Performs
+		-----------	-------	---------------------------------------------------------
+		LOCALE=				specfies the locale name
+					ENGLISH
+					etc.                                                                *;
+
+
+*	Illustration 2 - Using the SORTSEQ Option with NUMERIC_COLLATION Suboption   *; RUN;
+
+*	Note:  Sorting by strict character values is not always helpful   *;
+PROC SORT
+		DATA	= WORK.Olympics
+		OUT		= WORK.ByEvent;
+	BY	Event;
+	RUN;
+
+PROC PRINT DATA = WORK.ByEvent;
+	RUN;
+
+*	The SORTSEQ option can be useful when sorting character values starting with integers
+	The LINGUISTIC option has several suboptions which modify the linguistic collating sequence
+		NUMERIC_COLLATION=ON orders numbers by the numeric value (default is OFF)   *;
+PROC SORT
+		DATA	= WORK.Olympics
+		OUT		= WORK.ByEvent
+		SORTSEQ	= LINGUISTIC (NUMERIC_COLLATION = ON);
+	BY	Event;
+	RUN;
+
+PROC PRINT DATA = WORK.ByEvent;
+	RUN;
+*	Note:  SAS will only look for numeric digits
+	(e.g. if 1500 had been 1,500 it would've considered it as a 1)   *;
+
+
+
+
+*	SECTION 4.1.3 - REMOVING DUPLICATES   *; RUN;
+
+
+*	Illustration 1 - Using the NODUPKEY Option   *; RUN;
+
+*	The NODUPKEY option will remove any duplicate observations where
+		duplication is based on the variables in the BY statement
+
+	Goal 1:  Create a list of unique subjects who have experienced an Adverse Event (AE)   *;
+TITLE1 "All Adverse Events";
+PROC PRINT DATA = CanImpt.AELog;
+	RUN;
+
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPKEY
+		OUT		= WORK.SubjsWithAEs;
+	BY	SubjID;
+	RUN;
+
+TITLE1 "Subjects with Adverse Events";
+PROC PRINT DATA = WORK.SubjsWithAEs;
+	VAR SubjID;
+	RUN;
+TITLE;
+
+
+*	Goal 2:  Create a list of unique AEDescr/Grade combinations, using
+	Grades:	1 = Mild
+			2 = Moderate
+			3 = Severe
+			4 = Life-Threatening
+			5 = Death			*;
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPKEY
+		OUT		= WORK.AEDescrGradeCombos;
+	BY	AEDescr Grade;
+	RUN;
+
+TITLE1 "All Combinations of Adverse Event by Grade";
+PROC PRINT DATA = WORK.AEDescrGradeCombos NOOBS;
+	BY	AEDescr;
+	ID	AEDescr;
+	VAR	Grade;
+	RUN;
+TITLE;
+
+
+*	Illustration 2 - Using the NODUPKEY Option to Check Data   *; RUN;
+
+*	The laboratory data should contain unique Subject_ID/Lab_Date/Lab_Test
+		combinations
+	Use the NODUPKEY option and read the read/write counts in the log
+	Goal:  Check that each observation has a unique combination of these 3 variables!   *;
+PROC SORT
+		DATA	= CanImpt.Laboratory_2015
+		NODUPKEY
+		OUT		= WORK.Labs;
+	BY	Subject_ID Lab_Date Lab_Test;
+	RUN;
+
+
+*	Illustration 3 - Using the NODUPKEY Option to Remove Duplicate Observations   *; RUN;
+
+*	Goal:  Create a data set without any duplicate observations
+
+	Duplicate observations contain identical values for all variables
+	To detect this, all variables must be in the BY statement
+	Use the keyword _ALL_ to accomplish this!   *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPKEY
+		OUT		= WORK.NoDuplicObs;
+	BY	_ALL_;
+	RUN;
+
+TITLE1 "All Unique Adverse Events";
+PROC PRINT DATA = WORK.NoDuplicObs;
+	RUN;
+TITLE1;
+*	Often an observation which is a complete duplicate is an error!   *;
+
+
+*	Illustration 4 - Using the DUPOUT= Option to Capture the Removed Observations   *; RUN;
+
+*	The DUPOUT= option allows us to export the duplicates to a SAS data set
+	This helps us to examine duplicates and check for errors!
+	This is extremely useful when cleaning or investigating data
+
+	Goal:  Find the duplicate observation from 'Goal 3' above   *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPKEY
+		OUT		= WORK.NoDuplicObs
+		DUPOUT	= WORK.DupObs;
+	BY	_ALL_;
+	RUN;
+
+TITLE1 "Unique AE Observations";
+PROC PRINT DATA = WORK.NoDuplicObs;
+	RUN;
+
+TITLE1 "Duplicate AE Observations";
+PROC PRINT DATA = WORK.DupObs;
+	RUN;
+TITLE;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.1.3   |
+* ----------------------------- *
+	The 'CanImpt.Laboratory_2015' data set contains 81 observations
+
+	Task:  Determine the number of unique dates on which labs were taken   *;
+PROC SORT
+		DATA	= CanImpt.Laboratory_2015
+		NODUPKEY
+		OUT		= WORK.UniqueDates;
+	BY Lab_Date;
+	RUN;
+
+PROC PRINT DATA = WORK.UniqueDates;
+	VAR Lab_Date;
+	RUN;
+
+
+
+
+*	SECTION 4.1.4 - ADDITIONAL MATERIAL   *; RUN;
+
+*	The NODUPLICATES option may be used to remove duplicate observations
+	Aliases are NODUPREC and NODUP
+	Warning:  The BY variables need to form a primary key (identify rows uniquely)   *;
+
+
+*	Illustration 1 - Using the NODUPLICATES option to remove duplicate observations   *; RUN;
+
+*	This is the same as Sec 4.1.3 Illustration 4 except NODUPLICATES is used    *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPLICATES
+		OUT		= WORK.NoDuplicObs
+		DUPOUT	= WORK.DupObs;
+	BY	_ALL_;
+	RUN;
+
+PROC PRINT DATA = WORK.DupObs;
+	RUN;
+
+
+*	NB:  If the BY variables don't create a primary key, duplicates WON'T be removed   *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		NODUPLICATES
+		OUT		= WORK.NoDuplicObs
+		DUPOUT	= WORK.DupObs_No;
+	BY	SubjID; * WARNING:  SubjID doesn't create a primary key! *;
+	RUN;
+
+*	Conclusion:  NODUPLICATES must be used knowledgeably to guarantee that duplicates are removed!
+	Advice:  Use the NODUPKEY option   *;
+
+
+
+
+*	SECTION 4.1.5 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.1.1   |
+* ----------------------------- *
+	The 'CanImpt.AELog' data set contains variables named 'Grade',
+			'AEDescr', and 'OnsetDt' (among others)
+
+	Task:  Create a sorted temporary output data set named 'AEs' which has
+			observations sorted in the following order
+			1) First by 'Grade' in descending order
+			2) Then by 'AEDescr' in ascending order
+			3) Then by 'OnsetDt' in descending order   *;
+PROC SORT
+		DATA	= CanImpt.AELog
+		OUT		= WORK.AEs;
+	BY	DESCENDING Grade AEDescr DESCENDING OnsetDt;
+	RUN;
+
+PROC PRINT DATA = WORK.AEs;
+	BY 	DESCENDING Grade;
+	ID AEDescr;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.1.3   |
+* ----------------------------- *
+	The 'CanImpt.Laboratory_2015' data set contains 81 observations
+
+	Task:  Determine the number of unique dates on which labs were taken   *;
+PROC SORT
+		DATA	= CanImpt.Laboratory_2015
+		NODUPKEY
+		OUT		= WORK.UniqueDates;
+	BY	Lab_Date;
+	RUN;
+
+PROC PRINT DATA = WORK.UniqueDates;
+	VAR Lab_Date;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
