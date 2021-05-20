@@ -1,0 +1,677 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	3.1 - Variable Attributes.sas                                           *
+*	PURPOSE:	Illustrate material in Chapter 3.1                                      *
+*	AUTHOR:		Nelson													*
+*	CREATED:	2017-08-06																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-09-18  PJB Added TOC & Comprehension Checks                        *
+*               2019-09-18  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 3.1.1 - Variable Names                                                  *
+*   	Section 3.1.2 - Variable Types                                                  *
+*   	Section 3.1.3 - Variable Lengths                                                *
+*   	Section 3.1.4 - Variable Labels                                                 *
+*   	Section 3.1.5 - Additional Material                                             *
+*   	Section 3.1.6 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 3.1.1 - VARIABLE NAMES   *; RUN;
+
+
+*	Illustration 1 - Renaming Variables Using the RENAME Statement   *; RUN;
+
+*	Goal:  Rename the variable named 'Treatment' to 'TxNm'   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Groups;
+	RENAME	Treatment	= TxNm;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Multiple variables can be renamed in the same RENAME statement   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Groups;
+	
+	RENAME	Treatment	= TxNm
+			pt_id		= SubjID; 
+
+	PUTLOG	_ALL_; * This shows the PDV has variables named 'Treatment' and 'pt_id',
+				not 'TxNm' and 'SubjID' *;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	NB:  The renamed variables are brought into the PDV with their original names
+		This means any reference to these variables will need to use the ORIGINAL variable names
+	Goal:  Create a variable 'TxGrpCd' based on the treatment variable   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Groups;
+	
+	RENAME	Treatment	= TxNm;
+
+	IF			Treatment = 'Gemcitabine + MUJ018'	THEN	TxGrpCd = 'A';
+		ELSE IF Treatment = 'Gemcitabine + Placebo'	THEN	TxGrpCd = 'B';
+
+	RUN;
+			
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Renaming a Variable Using the RENAME= Data Set Option   *; RUN;
+
+*	Several options may be applied to individual data sets (i.e. the DATA step options)
+		To use them, they are specified inside parentheses following the data set name
+		In this illustration, we will use the RENAME= data set option
+
+	NB:  There are 2 sets of parentheses
+			The 1st set contains all data set options (we're just using the RENAME= option)
+			The 2nd set contains all variable pairs (original-name = new-name)
+
+	NB:  The variables are re-named on their way into the PDV
+		 This means any reference to these variables will need to use the NEW variable names!   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Groups	(	RENAME	= (	Treatment	= TxNm
+										pt_id		= SubjID	)
+						);
+	PUT	_ALL_;
+	RUN;
+
+*	Therefore, any reference to the variable must be made with its NEW name (b/c that's what's in the PDV!)
+		(Using Treatment will create an NOTE in the log)   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Groups	(	RENAME	= (	Treatment	= TxNm	)
+						);
+
+	IF			TxNm = 'Gemcitabine + MUJ018'	THEN	TxGrpCd = 'A';
+		ELSE IF TxNm = 'Gemcitabine + Placebo'	THEN	TxGrpCd = 'B';
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.1   |
+* ----------------------------- *
+	Task:  In the DATA step below, change the name of the following variables:
+			ETHNIC  -> Ethnicity
+			DOB		-> BirthDt   *;
+DATA WORK.New;
+	SET CanImpt.DM;
+	[enter-code-here];
+	RUN;
+
+PROC PRINT DATA = WORK.New;
+	RUN;
+
+
+
+
+*	SECTION 3.1.2 - VARIABLE TYPES   *; RUN;
+
+*	Although functions will be explained in detail in Chapter 3.4, we will use
+		2 functions here (INPUT and PUT) that deal directly with variable types.   *;
+
+
+*	Illustration 1 - SAS Performs Operations on Appropriate Variables with No Problems   *; RUN;
+
+*	Note:  No ERRORS, WARNINGS, or unusual NOTES appear in the log   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015;
+
+	WHERE	Lab_Test = 'WHITE BLOOD CELL COUNT';
+
+	* This is a numeric operation performed on a numeric variable *;
+	Lab_Value2 = Lab_Value * 10;
+
+	* This is a character operation performed on a character variable *;
+	Units2 = Units;
+	SUBSTR(Units2, 5, 1) = '2';
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - SAS May Implicitly Convert a Character Variable to Numeric   *; RUN;
+
+*	This is NOT the recommended method to convert a variable
+	Note:  'Subject_ID' is a character variable, but SAS makes a conversion when it is used
+		in a numeric manner.
+	However, in the new data set 'Subject_ID' is still character   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Arms;
+
+	NewID	= Subject_ID + 100;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR	Subject_ID NewID;
+	RUN;
+
+
+*	Note:  The conversion will not take place if there are any invalid characters   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Scans;
+
+	NewID	= SubjID + 10000;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR	SubjID NewID;
+	RUN;
+
+
+*	Illustration 3 - Explicitly Converting a Character Variable to a New, Different, Numeric Variable   *; RUN;
+
+*	Use the INPUT function with an informat to properly read the number
+	The INPUT function takes 2 arguments:
+		1)	The variable containing the values to be used
+		2)	The informat providing SAS with instructions on how to read the characters   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Arms;
+
+	NewID	= INPUT(Subject_ID, 4.);
+
+	RUN;
+*	Notice the results if an incorrect informat of 3. was used   *;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR	Subject_ID NewID;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.2   |
+* ----------------------------- *
+	In the 'CanImpt.Address' data set, the variable 'ID' is a character variable
+	Task:  Enter the code needed to create the 'NumericID' variable as a numeric
+			version of the 'ID' variable   *;
+DATA WORK.New;
+	SET CanImpt.Address;
+	NumericID = [enter-code-here];
+	RUN;
+
+PROC PRINT DATA = WORK.New;
+	VAR	ID NumericID;
+	RUN;
+
+
+*	Illustration 4 - SAS May Implicitly Convert a Numeric Variable to Character    *; RUN;
+
+*	If a numeric variable is used in an expression that expects a character variable, SAS will
+		convert the numeric values to character values
+
+	This is NOT the recommended method to convert a variable
+	Note:  'ID' is a numeric variable, but SAS makes a conversion when it is used
+		in a character manner.
+	However, in the new data set 'ID' is still numeric
+	SAS writes the numeric value using the BEST12 format (to attempt to capture the full value)
+		This results in a lot of leading blanks before the number in this illustration   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	CharID	= 'Patient: ' || ID;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR ID CharID;
+	RUN;
+
+
+*	Illustration 5 - Explicitly Converting a Numeric Variable to a New, Different, Character Variable   *; RUN;
+
+*	Goal:  Convert 'ID' in DM from numeric to character
+	Use the PUT function with a format to display the number as desired
+	The PUT function takes 2 arguments:
+		1)	The variable containing the values to be used (typically numeric, but may also be character)
+		2)	The format providing SAS with instructions on how to display the value   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	CharID	= PUT(ID, 2.);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR ID CharID;
+	RUN;
+
+*	This would be one way to create what was attempted in Illustration 4   *;
+DATA	WORK.Illus;
+	SET	CanImpt.DM;
+
+	CharID	= 'Patient: ' || PUT(ID, 2.);
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	VAR ID CharID;
+	RUN;
+
+
+*	Illustration 6 - Converting a Character Variable to a Numeric, Keeping the Same Name   *; RUN;
+
+*	This is often the goal when a variable is already named exactly as you want it, but it's character
+
+	Goal:  Converting 'BirthDt' to numeric, keeping the name 'BirthDt'
+
+	Note:  The type of any given variable CANNOT be changed.  Therefore, use the below:
+	Strategy:
+	1)	Rename the target variable on the way into the PDV (e.g. BirthDt -> BirthDt_Char)
+			so use the RENAME= data set option
+			Note: 'BirthDt' could be changed to ANY other name!
+	2)	Create a new variable from the one you just renamed using the INPUT or PUT function
+			i.e. Create 'BirthDt' from 'BirthDt_Char'
+	3)	DROP the original variable (i.e. the one renamed to 'BirthDt_Char')
+
+	NB:  The original variable didn't change from character to numeric--we changed variable names!   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Demographics	(	RENAME	= (	BirthDt	= BirthDt_Char	)
+								);
+
+	BirthDt	= INPUT(BirthDt_Char, DDMMYY10.);
+
+	DROP	BirthDt_Char;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+
+*	SECTION 3.1.3 - VARIABLE LENGTHS   *; RUN;
+
+
+*	Illustration 1 - Using the LENGTH Statement to Change Variable Length    *; RUN;
+
+*	The LENGTH statement has changed the lengths of all 3 variables
+	Note:  When the length is decreased, a warning regarding possible truncation is generated
+
+				Length in		Length in		Warning
+	Variable	'Sites' Data	'Illus' Data	Generated?
+	--------	------------	------------	----------
+	SiteCd			8				3				Yes
+	SiteAbv			4				5				No
+	SiteNm			35				20				Yes		*;
+DATA	WORK.Illus;
+
+	LENGTH	SiteCd			3	/* Warning generated */
+			SiteAbrv	$	5
+			SiteNm		$	20;	/* Warning generated */
+
+	SET	CanImpt.Sites;
+
+	RUN;
+
+
+*	Illustration 2 - Character Lengths Are Established the First Time the Variable is Encountered    *; RUN;
+
+*	Once the SET statement is compiled, the lengths of the character variables being read using the SET 
+		statement are fixed in the PDV and can't be changed later in the LENGTH statement
+
+				Length in		Length in		Length
+	Variable	'Sites' Data	'Illus' Data	Changed?
+	--------	------------	------------	----------
+	SiteCd			8				3				Yes
+	SiteAbv			4				4				No
+	SiteNm			35				35				No		*;
+DATA	WORK.Illus;
+	SET	CanImpt.Sites;
+
+	LENGTH	SiteCd			3	/* Length of this NUMERIC variable WAS changed */
+			SiteAbrv	$	5	/* Length of this CHARACTER variable was NOT changed  */
+			SiteNm		$	20;	/* Length of this CHARACTER variable was NOT changed  */
+	RUN;
+*	Note: 	Specifying a different length for a character variable will generate a warning, but
+			Specifying the same length for a character variable will not generate a warning
+	Be sure to change the length of a character variable by using a LENGTH statement
+		PRIOR to the SET statement
+
+	Notice also that the numeric variable length was decreased, but no warning!
+		This is because lengths specified in the LENGTH statement only affect numeric variables
+			in the output data set.
+		Shortening the length of a numeric variable may affect accuracy (see Additional Material)
+		During processing, all numeric variables have a length of 8 in the PDV (see Additional Material)   *;
+
+
+
+
+*	SECTION 3.1.4 - LABELS   *; RUN;
+
+
+*	Illustration 1 - Creating a Data Set Label   *; RUN;
+
+*	A label for the data set may be created using the LABEL= data set option
+	The label is shown in the Viewtable window banner and in the General Properties   *;
+DATA	WORK.Illus	(LABEL = 'CT Scan Data');
+	SET	CanImpt.Scans;
+	RUN;
+
+PROC CONTENTS	DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Creating Variable Labels For a Report   *; RUN;
+
+*	The LABEL statement may be used to create labels for variables
+
+	Note:  Labels specified in a procedure (e.g. PROC FREQ) are temporary (i.e. only during the PROC).
+
+	Goal:  Create a frequency distribution of the 'Treat' variable and show a label of 'Treatment Group'
+
+	Check the variable attributes to confirm the labels are not part of the variables' properties   *;
+PROC FREQ DATA = CanImpt.Arms;
+	TABLES	Treat;
+	LABEL	Treat = 'Treatment Group';
+	RUN;
+
+*	There is an existing label for the 'WBC' variable, though it is also 'WBC' (not helpful)
+	An existing label may be over-written for the PROC's output report   *;
+PROC MEANS	DATA = CanImpt.Lab_Data_Pt1;
+	VAR	WBC;
+	LABEL	WBC = 'White Blood Cell Counts';
+	RUN;
+*	Note:  The label is seen in the output, but the existing label 'WBC' is unchanged   *;
+
+*	Note:  PROC PRINT doesn't include labels unless the LABEL or SPLIT= option is specified   *;
+PROC PRINT
+		DATA = CanImpt.Scans
+		LABEL; * Without this, the variable names will be displayed, even though labels are created *;
+	RUN;
+
+
+*	Illustration 3 - Assigning "Permanent" Variable Labels   *; RUN;
+
+*	Labels are "permanently" associated with variables when the LABEL statement is used in the DATA step   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Lab_Data_Pt1;
+
+	LABEL	Pt		= 'Subject ID'
+			LabDate	= 'Lab Date'
+			WBC		= 'White Blood Cell Count (x10E3/mcL)'
+			RBC		= 'Red Blood Cell Count (M/mcL)'
+			HGB		= 'Hemoglobin (g/dL)'
+			HCT		= 'Hematocrit (%)'	;
+
+	RUN;
+*	NB:  We just attached a "Permanent" label to variables in a "Temporary" data set (in the WORK library)!   *;
+
+*	Check the variable attributes for WORK.Illus to confirm the labels are attached to the variables   *;
+PROC CONTENTS DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 4 - Permanent Labels Are Displayed Without Using a LABEL Statement   *; RUN;
+
+*	This is a major benefit of assigning labels in the DATA step!   *;
+PROC MEANS	DATA = WORK.Illus;
+	VAR	WBC RBC HGB HCT;
+	RUN;
+
+
+*	Illustration 5 - Once Permanent Labels are Assigned, Different Labels Can Still Be Used in a PROC   *; RUN;
+
+*	Goal:  Display a label of 'White Count (K/mcL)' for the WBC variable   *;
+PROC MEANS	DATA = WORK.Illus;
+	VAR	WBC RBC HGB HCT;
+	LABEL	WBC = 'White Count (K/mcL)';
+	RUN;
+*	Check the variable attributes to confirm the permanent label is still attached to 'WBC'   *;
+
+
+*	Illustration 6 - Not Using a Label For a Procedure (When a Permanent Label Exists)    *; RUN;
+
+*	Note:  Most procedures don't have a NOLABEL option
+	So, to NOT display a label, a space must be specified between the quotation marks   *;
+PROC MEANS	DATA = WORK.Illus;
+	VAR	WBC RBC HGB HCT;
+	LABEL	HGB = ' ';
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.4   |
+* ----------------------------- *
+	The 2 variables in the 'CanImpt.Groups' data set don't have labels 
+	Task:  Use PROC PRINT to display the data set values using the following labels:
+
+			Variable	Label
+			---------	---------
+			Treatment	Study Treatment
+			pt_id		Patient ID		;
+PROC PRINT DATA = CanImpt.Groups LABEL;
+	LABEL	Treatment	= 'Study Treatment'
+			pt_id		= 'Patient ID';
+	RUN;
+
+
+
+
+*	SECTION 3.1.5 - ADDITIONAL MATERIAL   *; RUN;
+
+
+*	Illustration 1 - By Default All Numeric Variables are Stored Using 8 Bytes (Length = 8)   *; RUN;
+
+*	Check the properties of CanImpt.Scans to verify that all 4 numeric variables are length 8
+	Recall that the length of 8 was never specified when creating this data set   *;
+
+
+*	Illustration 2 - Lengths of Numeric Variables May Range From 3 To 8 bytes   *; RUN;
+
+*	Note:  2 new variables are created below, both with length of 3 bytes   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Scans;
+
+	NewDate = ScanDtMon6;
+	NewLesionSum = LesionSumCmMon6;
+
+	LENGTH	NewDate NewLesionSum 3;
+
+	FORMAT	NewDate MMDDYY10.
+			LesionSumCmMon6 10.8;
+
+	RUN;
+
+DATA WORK.Illus2;
+	SET WORK.Illus;
+	DatesDiff = NewDate - ScanDtMon6;
+	SumDiff = NewLesionSum - LesionSumCmMon6;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus2;
+	VAR	ScanDtMon6 NewDate DatesDiff LesionSumCmMon6 NewLesionSum SumDiff;
+	RUN;
+*	Notice the inaccuracy resulting from using a length of 3 for the 2 new variables.
+	Best Practice:
+	1)	ALWAYS leave non-integers (i.e. variables with decimals) at 8 bytes
+	2)	If changing lengths of integers, know the limits of precision for each length
+		Length = 3:  Appropriate for any integer < 8,000		(actually 8,192 = 2^13)
+		Length = 4:  Appropriate for any integer < 2 Million	(actually 2^21)
+		Length = 5:  Appropriate for any integer < 500 Million	(actually 2^29)
+		Length = 6:  Appropriate for any integer < 100 Billion	(actually 2^37)
+		Length = 7:  Appropriate for any integer < 30 Quadrillion (actually 2^45)   *;
+
+
+*	Illustration 3 - Lengths of Numeric Variables are ALWAYS 8 in the PDV   *; RUN;
+
+*	Consequence:  Values in the PDV contain the exact precision of the values imported
+		Truncation occurs (resulting in changed values) on the way out of the PDV into the output data set   *;
+*	Notice in the PDV the values of the 2 new variables are identical to the original variables' values,
+		but in the output data set they are not because they've been truncated   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Scans;
+
+	NewDate = ScanDtMon6;
+	NewLesionSum = LesionSumCmMon6;
+
+	LENGTH	NewDate NewLesionSum 3;
+
+	FORMAT	NewDate MMDDYY10.
+			LesionSumCmMon6 NewLesionSum 10.8;
+
+	PUT	LesionSumCmMon6= NewLesionSum= ScanDtMon6= NewDate=;
+	PUT;
+
+	RUN;
+
+
+*	Illustration 4 - Using the ATTRIB Statement   *; RUN;
+
+*	The ATTRIB statement can associate a label, length, format, and informat with each variable
+		(not every attribute must be used)
+	This enables a single statement (ATTRIB) to replace individual statements for each attribute!   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Scans;
+
+	ATTRIB	NewID			LABEL = 'Patient ID'		LENGTH = $9	FORMAT = $5.
+			NewDate			LABEL = 'CT Scan Date'		LENGTH = 4	FORMAT = MMDDYY10.
+			NewLesionSum	LABEL = 'Sum of Lesions'				FORMAT = 4.1	;
+
+	NewID			= SubjID;
+	NewDate 		= ScanDtMon6;
+	NewLesionSum	= LesionSumCmMon6;
+
+	RUN;
+
+*	Check the properties for the data set WORK.Illus   *;
+PROC CONTENTS DATA = WORK.Illus;
+	RUN;
+*	Note:  Different values of LENGTH and FORMAT can be set if LENGTH is specified first   *;
+
+
+*	Illustration 5 - The LENGTH= Option Should Precede the FORMAT= Option (Character Variables)   *; RUN;
+
+*	If the FORMAT= option is specified first, it will also set the length of the variable
+	In this scenario, a warning will be generated if the values for LENGTH and FORMAT are different   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Scans;
+
+	ATTRIB	NewID			LABEL = 'Patient ID'		FORMAT = $5.	LENGTH = $9	
+			NewDate			LABEL = 'CT Scan Date'		LENGTH = 4		FORMAT = MMDDYY10.
+			NewLesionSum	LABEL = 'Sum of Lesions'					FORMAT = 4.1	;
+
+	NewID			= SubjID;
+	NewDate 		= ScanDtMon6;
+	NewLesionSum	= LesionSumCmMon6;
+
+	RUN;
+
+PROC CONTENTS DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 6 - The RENAME= Data Set Option with WHERE & DROP/KEEP Syntax   *; RUN;
+
+*	Multiple data set options may be specified following a data set name
+
+	The DROP=/KEEP= data set options are applied before RENAME=
+		(The same variable can't be renamed and dropped in the same statement)
+	When RENAME= is used with either WHERE= or a WHERE statement, the new name is
+		applied before the data is processed (you must use the new name in either
+		the WHERE= data set option or a WHERE statement)
+	Therefore, the most logical flow to use these data set options is
+		1)	KEEP=/DROP= specifications first
+		2)	RENAME= specifications next
+		3)	WHERE= specifications next   *;
+
+DATA WORK.Illus;
+	SET	SASHelp.Class	(	KEEP=	Name Sex
+							RENAME=	(Sex = Gender)
+							WHERE=	(Gender = 'F')	);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+
+
+*	SECTION 3.1.6 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.1   |
+* ----------------------------- *
+	Task:  In the DATA step below, change the name of the following variables:
+			ETHNIC  -> Ethnicity
+			DOB		-> BirthDt   *;
+DATA WORK.New;
+	SET CanImpt.DM;
+	RENAME	ETHNIC	= Ethnicity
+			DOB		= BirthDt;
+	RUN;
+
+PROC PRINT DATA = WORK.New;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.2   |
+* ----------------------------- *
+	In the 'CanImpt.Address' data set, the variable 'ID' is a character variable
+	Task:  Enter the code needed to create the 'NumericID' variable as a numeric
+			version of the 'ID' variable   *;
+DATA WORK.New;
+	SET CanImpt.Address;
+	NumericID = INPUT(ID, 3.);
+	RUN;
+
+PROC PRINT DATA = WORK.New;
+	VAR	ID NumericID;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 3.1.4   |
+* ----------------------------- *
+	The 2 variables in the 'CanImpt.Groups' data set don't have labels 
+	Task:  Use PROC PRINT to display the data set values using the following labels:
+
+			Variable	Label
+			---------	---------
+			Treatment	Study Treatment
+			pt_id		Patient ID		;
+PROC PRINT DATA = CanImpt.Groups LABEL;
+	LABEL	Treatment	= 'Study Treatment'
+			pt_id		= 'Patient ID';
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
