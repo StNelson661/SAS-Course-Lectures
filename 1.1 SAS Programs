@@ -1,0 +1,543 @@
+*************   P   R   O   G   R   A   M       H   E   A   D   E   R   *****************
+*****************************************************************************************
+*                                                                                       *
+*   PROGRAM:    1.1 - SAS Programs.sas                                                  *
+*   PURPOSE:    Illustrate material in Chapter 1.1                                      *
+*   AUTHOR:     Nelson                                                          *
+*   CREATED:    2017-08-23                                                              *
+*                                                                                       *
+*   COURSE:     BIOS 6680 - Data Management Using SAS                                   *
+*   DATA USED:  SASHelp.Class                                                           *
+*   SOFTWARE:   SAS (r) Proprietary Software 9.4 (TS1M4)                                *
+*   MODIFIED:   DATE        BY  REASON                                                  *
+*               ----------  --- ------------------------------------------------------- *
+*               2018-08-27  PJB Added TOC & Comprehension Checks                        *
+*                                                                                       *
+*   CONTENTS:                                                                           *
+*   	Section 1.1.1 - Background                                                      *
+*   	Section 1.1.2 - SAS Program Basics                                              *
+*   	Section 1.1.3 - Submitting a Program                                            *
+*   	Section 1.1.4 - SAS Statements                                                  *
+*   	Section 1.1.5 - SAS Program Syntax                                              *
+*   	Section 1.1.6 - Handling Errors                                                 *
+*   	Section 1.1.7 - Additional Material                                             *
+*   	Section 1.1.8 - Solutions                                                       *
+*                                                                                       *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+
+
+*   SECTION 1.1.1 - BACKGROUND   *; RUN;
+
+*	SAS is a suite of products and technologies
+	Centrally, SAS allows users to work with data, specifically to:
+		1)	Access data
+		2)	Manage data
+		3)	Analyze data
+		4)	Create reports
+	This represents a typical sequence of tasks that for a project
+
+	Base SAS is the foundation for all of SAS software, and is the product learned in this course
+		Base SAS provides (among other things):
+		1)	A very flexible programming language
+		2)	A choice of programming interfaces
+		3)	A vast library of programming procedures (a.k.a. PROCs)
+
+	Other products to be aware of include:
+		1)	SAS/STAT
+		2)	SAS/ACCESS products (e.g. SAS/ACCESS Interface to PC Files)
+		3)	SAS/GRAPH
+	
+	Although each product serves a different purpose, most are integrated and may be used
+		in a single program!   *;
+
+	
+*   Illustration 1 - How to Check Licensed Products   *; RUN;
+
+PROC SETINIT;
+	RUN;
+
+
+*   Illustration 2 - Checking Which SAS Products are Installed   *; RUN;
+
+PROC PRODUCT_STATUS;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.1   |
+* ----------------------------- *
+	Question:  Which version of SAS are you programming with?   *;
+
+
+
+
+*   SECTION 1.1.2 - SAS PROGRAM BASICS   *; RUN;
+
+*	A SAS program is a sequence of one or more steps
+	
+	There are 2 types of steps:
+	1)	DATA Steps
+			The DATA step is typically used to create a SAS data set
+	2)	PROC Steps (alias = PROCEDURE)
+			PROC steps typically process SAS data sets and produce reports
+		There are many types of PROC steps, of which we will learn several
+
+	Step Boundaries:
+	Each step begins with either of the following:
+	1)	A DATA statement (for DATA steps)
+	2)	A PROC statement (for PROC steps)
+			The specific PROC statement depends on the procedure you are running
+
+	SAS detects the end of a step when it encounters:
+	1)	A RUN statement (this ends the step explicitly, and is recommended)
+	2)	A QUIT statement for some PROCs (again, an explicit end)
+			Note: The QUIT statement is used to exit a procedure that allows
+					run-group processing
+	3)	The start of another step   *;
+
+
+*   Illustration 1 - Example Program   *; RUN;
+
+*	This program contains the following 3 steps:
+		Step 1:  A DATA step which creates a SAS data set
+		Step 2:  A PROC step which sorts the data set
+		Step 3:  A PROC step which creates a report of selected data values   *;
+DATA WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+PROC SORT DATA = WORK.ClassBMI;
+	BY	Sex DESCENDING BMI;
+	RUN;
+
+PROC PRINT DATA = WORK.ClassBMI;
+	BY	Sex;
+	ID	Name;
+	VAR	Age BMI;
+	RUN;
+
+
+*   Illustration 2 - Step Boundaries   *; RUN;
+
+*	Run Illustration 1 with altering the step boundaries   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.2   |
+* ----------------------------- *
+	Question:  How many steps does the following program contain?   *;
+DATA WORK.TeenBMI;
+	SET SASHelp.Class;
+	WHERE Age >= 13;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+
+PROC TTEST DATA = WORK.TeenBMI;
+	CLASS	Sex;
+	VAR	BMI;
+	RUN;
+
+
+
+
+*   SECTION 1.1.3 - SUBMITTING A PROGRAM   *; RUN;
+
+*	SAS programs may be submitted in Interactive Mode or in Batch Mode
+	We will use Interactive Mode in this course
+
+	SAS offers 3 interfaces for processing a SAS program in Interactive Mode:
+		1)	SAS Windowing Environment
+		2)	SAS Enterprise Guide
+		3)	SAS Studio
+
+	Within each interface there are 3 primary windows or tabs:
+		1)	Editor:  To write, edit, submit, and save a SAS program.  This window/tab is named:
+				SAS Windowing Environment:  Editor or Enhanced Editor
+				SAS Enterprise Guide:  Program
+				SAS Studio:  CODE
+		2)	Log:  To read notes, warnings, and errors resulting from a submitted program
+		3)	Results:  To view any output generated from a submitted program
+				SAS Windowing Environment:  By default output will appear in:
+					A)	Output window (LISTING output)
+					B)	Results Viewer window (HTML output)
+
+	These 3 windows/tabs are each used with a typical workflow, as follows:
+		1)	Write your program in the editor
+		2)	Submit the program
+		3)	Read the contents of the log to determine if any errors or warnings were issued
+				If there are any errors or warnings, debug the program and re-submit it
+		4)	View the output in the results window
+		5)	Continue programming and re-submit after each step, repeating steps 1-4
+
+
+*	Illustration 1 - How to Submit a Program   *; RUN;
+
+*	Programs may be submitted by any of the following:
+	1)	Clicking the "Submit" button on the toolbar (i.e. the "Running Man")
+	2)	Pressing the F3 key
+		NB:  Highlight the code you want to submit if you just want to submit part of a program!
+	3)	Using the menus to select Run-->Submit (Windowing Environment & EG only)
+	4)	Issuing the SUBMIT command in the command bar (Windowing Environment only)	*;
+
+DATA WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+
+*	Illustration 2 - Color-Coding in the Enhanced Editor Window / CODE Tab   *; RUN;
+
+*	Notice the color-coding for the different elements of SAS code   *;
+TITLE	"'Class' Children BMI Report";
+PROC PRINT DATA = WORK.ClassBMI;
+	BY	Sex;
+	ID	Name;
+	VAR	Age BMI;
+	FORMAT	BMI 4.1;
+	RUN;
+TITLE;
+
+
+
+
+*   SECTION 1.1.4 - SAS STATEMENTS   *; RUN;
+
+*	Every step is comprised of one or more statements
+
+	Statements typically begin with an identifying keyword
+
+	Statements may be:
+	1)	Valid only within a DATA step
+			(e.g. The SET statement)
+	2)	Valid only within a PROC step
+			Further, this depends on the specific PROC used
+			(e.g. PROC SORT does not have a MODEL statement, but PROC REG does)
+	3)	Valid in either a DATA step or a PROC step
+			(e.g. The FORMAT statement)
+
+	Another category of statements are GLOBAL statements
+		"Global" means that the statement specification remains in effect until:
+		1)	The specification is changed, or
+		2)	The SAS session is ended
+
+	Global execute as soon as they're submitted (i.e. they don't need a RUN or QUIT statement)
+
+	GLOBAL statements we will learn about include:
+		OPTIONS
+		LIBNAME
+		TITLE
+		FOOTNOTE
+
+	A complete list of statements may be found in the SAS online documentation
+		Start at support.sas.com
+		->	Click on the 'Documentation' tile
+		->	Click on the 'Programming: SAS 9.4 and Viya' link under 'Popular Documentation'
+		->	Within the 'DATA Step' section click on 'DATA Step Statements'
+			After clicking on any statement, the list of available statements
+				still shows on the left side of the screen
+
+	Important information about each statement includes:
+		- Where the statement is valid (i.e. in DATA or PROC steps)
+		- What type of statement it is (Executable or Declarative)
+		- The syntax for the statement
+		- Examples of how to use the statement
+	
+	Suggestion:  Learn how to navigate this website!
+
+	Comments
+	There are 2 types of comments within a SAS program:
+		1)	Comment statements
+		2)	Block comments
+
+
+*   Illustration 1 - Showing Statements Valid in DATA or PROC (or Both) Steps   *; RUN;
+
+DATA WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+PROC SORT DATA = WORK.ClassBMI;
+	BY	Sex DESCENDING BMI;
+	RUN;
+
+PROC PRINT DATA = WORK.ClassBMI;
+	BY	Sex;
+	ID	Name;
+	VAR	Age BMI;
+	RUN;
+		
+
+*   Illustration 2 - The OPTIONS Statement   *; RUN;
+
+*	The OPTIONS statement is a global statement which specifies system options
+	PROC OPTIONS will display all options and their settings in the log window   *;
+PROC OPTIONS;
+	RUN;
+
+*	The 'OPTION=' keyword will specify which option (and current setting) to display in the log   *;
+PROC OPTIONS	OPTION = CENTER;
+	RUN;
+
+*	Any system option can be changed by using the global OPTIONS statement
+	Goal:  Change the output to be left-justified   *;
+OPTIONS	NOCENTER;
+
+*	Reminder:  This setting will remain in place until it is changed or the SAS session ends
+	Goal:  Change the output back to being centered   *;
+OPTIONS	CENTER;
+
+
+*   Illustration 3 - Comments   *; RUN;
+
+*	Comments are not executed by SAS
+	A comment statement begins with an asterisk (*) and ends with a semicolon
+	A block comment begins with /* and ends with */
+	Note:  Block comments can't be nested
+	Comments serve many purposes, including:
+		1)	Providing information
+				-Creating a program header
+				-Explaining the rationale for each step in a program
+		2)	"Commenting out" code
+				-Removing part of a statement (e.g. a variable from a list) (use a block comment)
+				-Removing a statement from a step
+				-Removing several statements (e.g. a step) from a program
+				-Removing a section (e.g. multiple steps) from a program   *;
+
+*	I have added several comments to the below program   *;
+
+*** REPORT 4: Creating BMI and Generate Report for 'Class' data set ***;
+DATA WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+/*PROC SORT DATA = WORK.ClassBMI;*/
+/*	BY	Sex DESCENDING BMI;*/
+/*	RUN;*/
+
+*to block comment highlight it all and do CTRL /;
+
+PROC PRINT DATA = WORK.ClassBMI;
+*	BY	Sex;
+	ID	Name;
+	VAR	/*Age*/ BMI; * Supervisor requested age be removed: 2017-08-23 email *;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.4   |
+* ----------------------------- *
+	Task:  Add comments to the code below to accomplish the following:
+			1)	Comment out the entire PROC SORT step
+			2)	Comment out the "OR Sex = 'F'" syntax in the WHERE statement
+			3)	Add a comment at the bottom stating:  Performed by [initials] on [date]!   *;
+DATA WORK.TeenBMI;
+	SET SASHelp.Class;
+	WHERE Age >= 13;* OR Sex = 'F';
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+/* PROC SORT DATA = WORK.BMI; */
+/* 	BY	Sex; */
+/* 	RUN;	 */
+
+PROC TTEST DATA = WORK.BMI;
+	CLASS	Sex;
+	VAR	BMI;
+	*performed by SN on 29 AUG 2019;
+	RUN;
+
+
+
+
+*   SECTION 1.1.5 - SAS PROGRAM SYNTAX   *; RUN;
+
+*	SAS code is free format with very few rules
+
+	In short, the basic rules are:
+		1)	Every statement ends with a semicolon
+		2)	Keywords must be spelled correctly
+		3)	Quoted strings must have matching quotation marks
+
+	It will be very beneficial to learn the statements within the DATA step and
+		the options associated with each statement
+
+
+*   Illustration 1 - Free Format Can Lead to Difficult Code to Read   *; RUN;
+
+*	The syntax is correct and therefore the code below will execute correctly   *;
+data work.classbmi; set sashelp.class; bmi=(00.45*weight)/(0.025*height)**2;
+format bmi 4.1; run; proc sort data=work.classbmi; by sex descending bmi;
+run; proc print data=work.classbmi; by sex; id name; var age bmi; run;
+
+*	My Basic Formatting Recommendations:
+	1)	Be consistent and neat
+	2)	Start steps in column 1 and indent following statements one level
+	3)	Begin each statement on a new line
+	4)	When a long statement takes multiple lines, indent the continuation lines
+	5)	Further indent nested statements (e.g. between DO and END statements)
+	6)	Insert a blank line between steps   *;
+
+
+
+
+*   SECTION 1.1.6 - HANDLING ERRORS   *; RUN;
+
+*	A error results from the syntax rules being violated
+	The most common error is a missing semicolon
+		However, SAS logically cannot issue a 'Missing Semicolon' message!   *;
+
+
+*   Illustration 1 - Errors and Warnings   *; RUN;
+
+*	Submit the following code and check the log!   *;
+DATa WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+PROC SORT DATA = WORK.ClassBMI;
+	BY	Sex BMI
+	RUN;
+
+PROC PRINT DATA = WORK.ClassBMI;
+	BY	Sex;
+	ID	Name;
+	VAR	Age BMI;
+	RUN;
+
+
+*   Illustration 2 - Correct Errors from the Start of the Code   *; RUN;
+
+*	Notice how many errors appear in the log   *;
+DA WORK.ClassBMI;
+	SET	SASHelp.Class;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+
+*   Illustration 3 - Errors from Un-Matched Quotation Marks   *; RUN;
+
+*	Submit the following code and check the log - why are there no errors?   *;
+TITLE	"'Class' Children BMI Report";
+PROC PRINT DATA = WORK.ClassBMI;
+	BY	Sex;
+	ID	Name;
+	VAR	Age BMI;
+	RUN;
+TITLE;
+
+*";
+
+
+*   Illustration 4 - Wrapper Code   *; RUN;
+
+*	Discuss the wrapper code at the end of the program   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.6   |
+* ----------------------------- *
+	Task:  Identify and correct the error in the following program:   *;
+DATA WORK.FemaleBMI;
+	SET SASHelp.Class;
+	WHERE Sex = 'F';
+	BMI = (0.45*Weight) / (0.025*Height)**2
+	FORMAT	BMI 4.1;
+	RUN;
+
+
+
+
+*   SECTION 1.1.7 - ADDITIONAL MATERIAL   *; RUN;
+
+*	None   *;
+
+
+
+
+*   SECTION 1.1.8 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.1   |
+* ----------------------------- *
+	Question:  Which version of SAS are you programming with?   *;
+PROC PRODUCT_STATUS;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.2   |
+* ----------------------------- *
+	Question:  How many steps does the following program contain?   *;
+DATA WORK.TeenBMI;
+	SET SASHelp.Class;
+	WHERE Age >= 13;
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+
+PROC TTEST DATA = WORK.TeenBMI;
+	CLASS	Sex;
+	VAR	BMI;
+	RUN;
+
+*	There are 2 steps in the above program
+	The DATA step ends when SAS process the PROC TTEST statement   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.4   |
+* ----------------------------- *
+	Task:  Add comments to the code below to accomplish the following:
+			1)	Comment out the entire PROC SORT step
+			2)	Comment out the "OR Sex = 'F'" syntax in the WHERE statement
+			3)	Add a comment at the bottom stating:  Performed by [initials] on [date]!   *;
+DATA WORK.TeenBMI;
+	SET SASHelp.Class;
+	WHERE Age >= 13;* OR Sex = 'F';
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+
+/*PROC SORT DATA = WORK.TeenBMI;*/
+/*	BY	Sex;*/
+/*	RUN;	*/
+
+PROC TTEST DATA = WORK.TeenBMI;
+	CLASS	Sex;
+	VAR	BMI;
+	RUN;
+* Performed by PJB on 2019-08-26! *;
+
+
+* ----------------------------- *
+|   Comprehension Check 1.1.6   |
+* ----------------------------- *
+	Task:  Identify and correct the error in the following program:   *;
+DATA WORK.FemaleBMI;
+	SET SASHelp.Class;
+	WHERE Sex = 'F';
+	BMI = (0.45*Weight) / (0.025*Height)**2;
+	FORMAT	BMI 4.1;
+	RUN;
+*	Add a semicolon at the end of the BMI formula to complete the statement!   *;
+
+
+
+
+;   *'; *"; */; QUIT;   RUN;
+*   End of Program   *; RUN;
+
