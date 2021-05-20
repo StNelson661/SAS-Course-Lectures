@@ -1,0 +1,812 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	4.4 - Combining Data Horizontally.sas                                   *
+*	PURPOSE:	Illustrate material in Chapter 4.4                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-10-30																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-05  SMN Added TOC & Comprehension Checks                        *
+*               2019-10-16  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 4.4.0 - Basic Information                                               *
+*   	Section 4.4.1 - One-To-One Merges                                               *
+*   	Section 4.4.2 - One-To-Many Match Merge                                         *
+*   	Section 4.4.3 - Additional Material                                             *
+*   	Section 4.4.4 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below
+	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+LIBNAME CanTabs    "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME HypImpt    "&CourseRoot/Hypertension Study/Data/2_Import";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 4.4.0 - BASIC INFORMATION   *; RUN;
+
+*	Combining data horizontally is most commonly referred to as "merging" data
+	Merging data is most often performed when the data sets contain different variables
+
+	For a merge, in the output data set, the final number of:
+		1)	Observations is the maximum of the number of observations from the component data sets
+		2)	Variables is sum of the uniquely-named variables across all component data sets
+
+	For a match-merge, in the output data set, the final number of:
+		1)	Observations is the number of unique observations which are in each of the component data sets
+				(where uniqueness is determined by the BY-variables)
+		2)	Variables is sum of the uniquely-named variables across all component data sets   *;
+
+
+
+
+*	SECTION 4.4.1 - ONE-TO-ONE MERGES   *; RUN;
+
+
+*	Illustration 1 - Performing a Merge   *; RUN;
+
+*	A merge simply joins together observations by row
+		e.g. The first rows from each data set are combined
+			 The 2nd rows from each data set are combined, etc.
+
+	Creating data for the illustration   *;
+DATA	WORK.A;
+	INFILE	DATALINES;
+	INPUT	Name $ SexCd $;
+	DATALINES;
+Aika F
+Brandon M
+Carol F
+;
+
+PROC PRINT DATA = WORK.A;
+	RUN;
+
+DATA	WORK.B;
+	INFILE	DATALINES;
+	INPUT	First $ Race $9.;
+	DATALINES;
+Carol Caucasian
+Aika Asian
+Brandon Black
+;
+
+PROC PRINT DATA = WORK.B;
+	RUN;
+
+*	This is a merge   *;
+DATA	WORK.Illus;
+	MERGE	WORK.A
+			WORK.B;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	NB:  This is most often NOT what is desired
+
+	Nevertheless, in WORK.Illus, the number of:
+		1)	Observations is 3 (there are 3 in both component data sets)
+		2)	Variables is 2 + 2 = 4   *;
+
+
+*	Illustration 2 - Performing a Match-Merge   *; RUN;
+
+*	Most commonly the observations being merged are related to each other
+
+	We therefore want to join the observations according to a variable that identifies
+		each observation (multiple variables may be needed to uniquely identify each obs)
+	The variable(s) that uniquely identify an observation are "key" variable(s)
+	NB:  The "key" variable must have the same type and name to merge the data sets
+
+	A one-to-one match-merge is appropriate when a single observation in one data
+		set is related to one and only one observation in another data set
+
+	The MERGE statement is used to combine data sets horizontally
+	The BY statement is required for a match-merge
+	Recall:  When using a BY statement, the data sets must be ordered by the BY variable(s)
+
+	Goal:  Combine the contact and demographic data for each subject   *;
+DATA	WORK.Illus;
+	MERGE	CanTabs.Contact
+			CanTabs.Demog;
+	BY	SubjID;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	The order of variables in the output data set is determined by the order in
+		the MERGE statement
+		So the variables from 'Contact' are before the variables from 'Demog' data set
+	In WORK.Illus, the number of:
+		1)	Observations is 16 (the same 16 are in both component data sets)
+		2)	Variables is 10 + 7 - 1 = 16
+				'SubjID' is in both data sets (thus the -1),
+				so there are 16 uniquely-named variables across the component data sets   *;
+
+
+*	Illustration 3 - Match-Merging Data with Non-Matches   *; RUN;
+
+*	A non-match is the situation where an observation coming from one data set does not
+		have a match from another component data set
+
+	To illustrate, I will create a data set containing summary Adverse Event data   *;
+DATA	WORK.AESummary;
+	SET	CanImpt.AELog;
+	BY	SubjID;
+
+	IF	FIRST.SubjID = 1 	THEN AECnt = 0;
+	AECnt + 1;
+
+	IF	LAST.SubjID;
+
+	KEEP	SubjID AECnt;
+	RUN;
+
+PROC PRINT DATA = WORK.AESummary;
+	RUN;
+
+*	Goal:  Combine the 'Demog' data with the 'AESummary' data   *;
+DATA	WORK.Illus;
+	MERGE	CanTabs.Demog
+			WORK.AESummary;
+	BY	SubjID;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Notice the following facts:
+
+	1.	The SAS syntax is the same regardless of whether there are non-matches present or not
+
+	2.	When the number of observations is not the same, missing values will be inserted as values for the
+			"remaining" observations from the data set with fewer observation
+
+	3.	By default, a match-merge produces all matches and non-matches (i.e. all observations
+			and variables from each data set will be in the final data set)   *;
+
+
+*	Illustration 4 - Learning About the IN= Data Set Option   *; RUN;
+
+*	The IN= data set option produces a temporary variable named by the user
+			(they may be named any name not already used)
+		Recall:  Temporary variables are only in the PDV
+					i.e. they aren't included in the output data set
+
+	Values of the temporary variables are:
+		1 if the data set contributes to the current observation
+		0 if the data set does not contribute to the current observation
+
+	Although most often used with the MERGE statement, IN= may also be used with other
+		methods for reading data sets (SET, UPDATE, APPEND, etc.)
+
+	I will create 2 temporary variables using the IN= data set option
+	To see the values of the IN= temporary variables, we need to send their values to the log   *;
+DATA	WORK.Illus;
+	MERGE	CanTabs.Demog	(IN = InDemog)
+			WORK.AESummary	(IN = InAEs);
+	BY	SubjID;
+
+	PUTLOG	SubjID= SexCd= InDemog= AECnt= InAEs=;
+
+	RUN;
+
+
+*	Illustration 5 - Using the IN= Data Set Option   *; RUN;
+
+*	Goal:  Create a data set named 'AEAnalysis' based on the following:
+	1)	The data set contains the following variables:
+		1.	SubjID
+		2.	AECnt (from WORK.AESummary)
+		3.	SexCd (from CanTabs.Demog)
+		4.	LesionRatio (from CanTabs.Outcome)
+	2)	The data set only contains observations from subjects who had an AE   *;
+DATA	WORK.AEAnalysis;
+	MERGE	WORK.AESummary	(	IN = InAEs	)
+			CanTabs.Demog	(	KEEP = SubjID SexCd	)
+			CanTabs.Outcome	(	KEEP = SubjID LesionRatio	);
+	BY	SubjID;
+	IF	InAEs = 1;
+	RUN;
+
+PROC PRINT DATA = WORK.AEAnalysis;
+	RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.4.1   |
+* ----------------------------- *
+	Task:  Create a data set containing subjects who did NOT
+			experience an adverse event   *;
+DATA	WORK.NoAEs;
+	MERGE	WORK.AESummary	(	IN = InAEs	)
+			CanTabs.Demog	(	KEEP = SubjID SexCd	)
+			CanTabs.Outcome	(	KEEP = SubjID LesionRatio	);
+	BY	SubjID;
+	[add statement here];
+	RUN;
+
+PROC PRINT DATA = WORK.NoAEs;
+	RUN;
+
+
+*	Illustration 6 - Example Task   *; RUN;
+
+*	Task:  Find the ages of the Mississippi citizens in our cohort who died
+
+	Recall:  Match-merging requires sorted data sets (by the BY-variable(s))
+
+	Sort the Mississippi citizens data   *;
+PROC SORT
+		DATA	= HypImpt.MS_Citizens	(	KEEP = SSN Gender Racial DOB	)
+		OUT		= WORK.MS_Citizens;
+	BY	SSN;
+	RUN;
+
+PROC PRINT DATA = WORK.MS_Citizens (OBS = 5);
+	RUN;
+
+*	Sort the NDI data set (containing death data)   *;
+PROC SORT
+		DATA	= HypImpt.NDI
+		OUT		= WORK.NDI;
+	BY	SSN;
+	RUN;
+
+PROC PRINT DATA = WORK.NDI (OBS = 5);
+	RUN;
+
+*	Match-merge the data sets   *;
+DATA	WORK.MSDeaths;
+	MERGE	WORK.MS_Citizens	(	IN		= InMSCitizens)
+			WORK.NDI			(	IN		= InNDI	);
+	BY	SSN;
+
+	IF	InMSCitizens	= 1	AND
+		InNDI			= 1	; * This is the only new code in this DATA step *;
+
+	BirthDt	= INPUT(DOB, DATE9.);
+
+	AgeAtDeath	= YRDIF(BirthDt, DeathDt, 'AGE');
+	FORMAT	BirthDt		YYMMDDD10.
+			AgeAtDeath	4.1;
+
+	DROP	DOB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.MSDeaths;
+	VAR	SSN AgeAtDeath;
+	RUN;
+
+*	PROC SQL is a great tool to learn (eventually) as it can perform many tasks
+		in a single step!
+	This short step takes the place of 2 PROC SORTS, 1 DATA step, and 1 PROC PRINT!
+	Note:  You don't need to learn this - it is simply to show you an alternate approach :)   *;
+PROC SQL NUMBER;
+	SELECT	C.SocSecNum LABEL = 'SSN',
+			YRDIF(INPUT(DOB, DATE9.), DeathDt, 'AGE') AS AgeAtDeath FORMAT = 4.1 LABEL = 'Age At Death'
+		FROM	HypImpt.MS_Citizens	(KEEP = SocSecNum DOB)	AS C,
+				HypImpt.NDI			(KEEP = SSN DeathDt)	AS N
+		WHERE	C.SocSecNum = N.SSN
+		ORDER BY	SSN;
+	QUIT;
+
+
+*	Illustration 7 - Side Note:  How SAS Translates Values to 'True' or 'False'   *; RUN;
+
+*	SAS classifies values in the following manner:
+		Values of missing and 0 are considered "False"
+		All other values are considered as "True"
+
+	In a situation where SAS evaluates an expression:
+		If just a variable is listed SAS is 'testing' if the values are 'True'
+		A NOT will negate that and SAS will 'test' for values that are 'False'   *;
+
+DATA	WORK.TrueFalse;
+	INFILE	DATALINES;
+	INPUT	Name	$
+			Value	;
+	DATALINES;
+Allie .
+Bill  -1
+Chris 0
+Dan   1
+Ellie 2
+Fred  25
+Ginny 777
+;
+
+PROC PRINT DATA = WORK.TrueFalse;
+	RUN;
+
+DATA	WORK.True;
+	SET	WORK.TrueFalse;
+	IF	Value;
+	RUN;
+
+PROC PRINT DATA = WORK.True;
+	RUN;
+
+DATA	WORK.False;
+	SET	WORK.TrueFalse;
+	IF	NOT Value;
+	RUN;
+
+PROC PRINT DATA = WORK.False;
+	RUN;
+
+
+*	Illustration 8 - Alternative Syntax to Test IN= temporary variables   *; RUN;
+
+*	I'm using the same 2 illustrations above, just using less code in
+		the IF statement
+	SAS uses the 'True' or 'False' paradigm for selecting the values   *;
+
+DATA	WORK.AEAnalysis;
+	MERGE	WORK.AESummary	(	IN = InAEs	)
+			CanTabs.Demog	(	KEEP = SubjID SexCd	)
+			CanTabs.Outcome	(	KEEP = SubjID LesionRatio	);
+	BY	SubjID;
+
+	IF	InAEs;
+	* Technically translated to "IF InAEs is anything other than 0 or missing";
+
+	RUN;
+
+PROC PRINT DATA = WORK.AEAnalysis;
+	RUN;
+
+
+DATA	WORK.MSDeaths;
+	MERGE	WORK.MS_Citizens	(	RENAME	= (	SocSecNum	= SSN	)
+									IN		= InMSCitizens
+								)
+			WORK.NDI			(	IN		= InNDI	);
+	BY	SSN;
+
+	IF	InMSCitizens AND InNDI;
+
+	BirthDt	= INPUT(DOB, DATE9.);
+
+	AgeAtDeath	= YRDIF(BirthDt, DeathDt, 'AGE');
+	FORMAT	BirthDt		YYMMDDD10.
+			AgeAtDeath	4.1;
+	DROP	DOB;
+
+	RUN;
+
+PROC PRINT DATA = WORK.MSDeaths;
+	RUN;
+
+
+
+
+*	SECTION 4.4.2 - ONE-TO-MANY MATCH MERGE   *; RUN;
+
+
+*	Illustration 1 - Performing a One-to-Many Match-Merge   *; RUN;
+
+*	Task:  Determine the AEs connected with each treatment
+	Note:	The data set CanTabs.TxGrp has 1 observation per value of 'SubjID'
+			The data set CanTabs.AEs has 0, 1, or 2+ observations per value of 'SubjID'
+			Therefore, this is a "one-to-many" match-merge   *;
+PROC PRINT DATA = CanTabs.TxGrp;
+	RUN;
+
+PROC PRINT DATA = CanTabs.AEs;
+	RUN;
+
+DATA	WORK.AEsByTx;
+	MERGE	CanTabs.TxGrp
+			CanTabs.AEs	(IN = InAEs);
+	BY	SubjID;
+
+	IF	InAEs = 1;
+
+	RUN;
+*	Notice that the syntax is still the same!   *;
+
+PROC PRINT DATA = WORK.AEsByTx;
+	RUN;
+
+
+*	Illustration 2 - Merging a Summary Statistic Into a Data Set   *; RUN;
+
+*	Creating data for the illustration   *;
+DATA	WORK.Basketball;
+	INFILE	DATALINES;
+	INPUT	Team	$
+			Player	$
+			Points	;
+	DATALINES;
+Cobras  Chloe   16
+Cobras  Claire  4
+Cobras  Callie  14
+Cobras  Caden   12
+Cobras  Caleb   3
+Lynx    Lucas   2
+Lynx    Layla   5
+Lynx    Lily    4
+Lynx    Lucy    9
+Lynx    Logan   16
+;
+
+PROC PRINT DATA = WORK.Basketball;
+	RUN;
+
+*	Task:  Calculate the percent of the team's points each player scored
+
+	Creating summary statistic (total points) for each team
+	This could also be accomplished with PROC MEANS   *;
+DATA	WORK.TeamTotals	(	KEEP	=	Team TotalPoints	);
+	SET	WORK.Basketball;
+	BY	Team;
+
+	IF	FIRST.Team	= 1	THEN	TotalPoints = .;
+
+	TotalPoints + Points;
+
+	IF	LAST.Team	= 1;
+
+	RUN;
+
+PROC PRINT DATA = WORK.TeamTotals;
+	RUN;
+
+*	Having a common variable ('Team') allows us to perform a
+		one-to-many match-merge   *;
+DATA	WORK.Statistics;
+	MERGE	WORK.Basketball
+			WORK.TeamTotals;
+	BY	Team;
+
+	Percent	= Points / TotalPoints;
+	FORMAT	Percent	PERCENT5.;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Statistics;
+	RUN;
+
+
+*	Illustration 3 - Understanding How Multiple SET Statements Work   *; RUN;
+
+*	Recall:  Multiple data sets may be concatenated using a single SET statement   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015
+		CanImpt.Laboratory_2016;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Now using multiple (2) SET statements   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015;
+	SET	CanImpt.Laboratory_2016;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Note:  Most likely the result is not what was desired, yet no ERROR messages in the log
+
+	NB:  When SAS executes each SET statement, it brings the Nth (e.g. 1st, 2nd, etc.) observation
+			from EACH data set into the single PDV.
+			The consequence is that variables named the same in both data sets will end up with the
+			most recently imported value!  (In our case this is the 2016 data)
+
+	NB:  SAS will stop processing when it encounters the first end-of-file marker.
+			The consequence is that the final data set will contain the number of observations
+			found in the smaller of all data sets used!
+
+	Conclusion:  Unlike with MERGE, multiple SET statements don't perform like a single SET statement   *;
+
+
+*	Illustration 4 - Merging a Single Observation with a Data Set   *; RUN;
+
+*	It is common to need to merge a single summary value with an entire data set
+	This is another form of a one-to-many merge
+
+	We can use multiple SET statements to accomplish this
+
+	Creating data for the illustration   *;
+DATA	WORK.Basketball;
+	INFILE	DATALINES;
+	INPUT	Player	$
+			Points	;
+	DATALINES;
+Chloe   16
+Claire  4
+Callie  14
+Caden   12
+Caleb   3
+;
+
+PROC PRINT DATA = WORK.Basketball;
+	RUN;
+
+*	Task:  Calculate the percent of the team's points each player scored
+
+	First the total points for each team needs to be calculated
+	Note:  Oftentimes, summary data would be the output from another procedure (e.g. PROC MEANS)   *;
+DATA	WORK.TeamTotal	(	KEEP = TotalPoints	);
+	SET	WORK.Basketball	END	= LastObs;
+	TotalPoints + Points;
+	IF	LastObs	= 1;
+	RUN;
+
+PROC PRINT DATA = WORK.TeamTotal;
+	RUN;
+
+*	Now the total points needs to be merged with the individual data to calculate percentages
+
+	Approach 1 - Using a MERGE statement   *;
+DATA	WORK.Statistics;
+	MERGE	WORK.Basketball
+			WORK.TeamTotal;
+	RUN;
+
+PROC PRINT DATA = WORK.Statistics;
+	RUN;
+*	Recall:  A merge puts together the 1st obs from both data sets, then the 2nd etc.
+	The 'TeamTotal' data set only has 1 obs
+	A match-merge won't work because there's no common variable   *;
+
+
+*	Approach 2 - Using a SET statement   *;
+DATA	WORK.Statistics;
+	SET	WORK.Basketball
+		WORK.TeamTotal;
+	RUN;
+*	Recall:  The data set will have 5 + 1 = 6 total observations   *;
+
+PROC PRINT DATA = WORK.Statistics;
+	RUN;
+
+
+*	Approach 3 - Using multiple SET statements   *;
+DATA	WORK.Statistics;
+	SET	WORK.Basketball;
+	SET	WORK.TeamTotal;
+	RUN;
+*	Recall:  The number of obsesrvations in the final data set will be equal to the number
+		in the smaller data set   *;
+
+PROC PRINT DATA = WORK.Statistics;
+	RUN;
+
+*	Approach 4 - Using multiple SET statements (with a modification)
+	We will restrict the smaller data set to import when _N_ = 1   *;
+DATA	WORK.Statistics;
+	SET	WORK.Basketball;
+	IF	_N_ = 1	THEN	SET	WORK.TeamTotal;
+
+	Percent	= Points / TotalPoints;
+
+	FORMAT	Percent	PERCENT5.;
+
+	RUN;
+
+PROC PRINT DATA = WORK.Statistics;
+	RUN;
+*	Recall:  Values imported through the SET statement are automatically retained in the PDV.
+				This is why the values read from the summary data set populate each observation!
+	This approach worked great!
+
+	NB:  This approach avoids any hard-coding of values and is thus very low maintenance!
+
+	Strategy:
+	If there is a common variable to the multiple data sets, use a match-merge
+		(i.e. use both MERGE and BY statements)
+	If there is not a variable that links the data set to a 1-observation data set (e.g. summary statistics),
+		use multiple SET statements (but restrict the smaller data set with IF _N_ = 1 ...   *;
+
+
+
+
+*	SECTION 4.4.3 - ADDITIONAL MATERIAL  *; RUN;
+
+
+*	Illustration 1 - Using the MERGE Statement with a Single Data Set   *; RUN;
+
+*	Note:  In this scenario, SAS treats the MERGE statement as if it were a SET statement   *;
+DATA	WORK.Illus;
+	MERGE	CanTabs.Demog;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 2 - Sometimes a MERGE Is Appropriate   *; RUN;
+
+*	Although most often a match-merge is what is desired, sometimes
+		data sets to be combined horizontally don't have a key variable
+	This is often the case when results are in single-observation data sets   *;
+
+*	Creating data for the illustration   *;
+DATA	WORK.ResultsA;
+	EventsA	= 6;
+	TrialsA	= 10;
+	PropA	= EventsA / TrialsA;
+	RUN;
+
+PROC PRINT DATA = WORK.ResultsA;
+	RUN;
+
+DATA	WORK.ResultsB;
+	EventsB	= 1;
+	TrialsB	= 10;
+	PropB	= EventsB / TrialsB;
+	RUN;
+
+PROC PRINT DATA = WORK.ResultsB;
+	RUN;
+
+DATA	WORK.PVal;
+	PValue	= 0.019;
+	RUN;
+
+PROC PRINT DATA = WORK.PVal;
+	RUN;
+
+*	Goal:  Merge the results from group A, group B, and the p-value   *;
+DATA	WORK.Results;
+	MERGE	WORK.ResultsA
+			WORK.ResultsB
+			WORK.PVal;
+	PropDiff	= PropA - PropB;
+	RUN;
+
+PROC PRINT DATA = WORK.Results;
+	RUN;
+	
+
+*	Illustration 3 - How SAS Processes a Match-Merge   *; RUN;
+
+*	Note:  The steps below are the same for
+		1)	One-to-one match-merges
+		2)	One-to-one match-merges with non-matches
+		3)	One-to-many match-merges
+		4)	One-to-many match-merges with non-matches
+
+	Think about it:  SAS has no way of knowing ahead of time whether:
+		The match-merge is one-to-one or one-to-many
+		The match-merge has non-matches or not   *;
+
+*	Prior:  SAS puts a tracking pointer at the first value of each data set's BY variable(s)
+	Step 0:  SAS compiles the DATA step, creates the PDV, and initializes all variables in the PDV to missing
+	Step 1:  SAS checks whether the values of the BY variable(s) match
+	Step 2:  If Yes, the observations are read into the PDV in the order the data sets are listed
+			 If No, SAS selects the lowest value of the BY variable(s) and
+				A) Writes the values from that data set into the PDV
+				B) Assigns missing values to the variables from the other data set(s)
+				C) Writes the contents of the PDV to the output data set
+	Step 3:  SAS moves to the next observation in each data set that just contributed an observation
+	Step 4:  SAS checks to see if BOTH values of the BY-variable(s) are different than what is in the PDV
+			 If No, the values in the PDV are retained and
+				A) SAS writes the values into the PDV from the data set(s) with the same BY-values as
+					previously in the PDV, and returns to Step 3
+			 If Yes, the contents of the PDV are re-initialized to missing (return to Step 1)
+
+	SAS continues until all observations from all contributing data sets has been processed   *;
+
+
+*	Illustration 4 - Using Multiple MERGE Statements    *; RUN;
+
+*	Note:  Multiple MERGE statements may be used   *;
+DATA	WORK.Illus;
+	MERGE	CanTabs.Contact;
+	MERGE	CanTabs.Demog;
+	BY	SubjID;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Note:  The results are the same as when a single MERGE statement was used
+			(Section 4.4.1, Illustration 2)
+	The point is to contrast this to when multiple SET statements are used
+		(which produces different results than when a single SET statement is used)   *;
+
+
+*	Illustration 5 - Over-writing Data Values   *; RUN;  
+
+*	When there are variables with the same name in both data sets, the most-recently
+		read value will	over-write any previously existing value for the variable   *;
+
+
+*	Illustration 6 - Match-Merging 3+ Data Sets Lacking a Common Variable   *; RUN;
+
+*	Suppose the following 3 data sets are to be merged:
+	
+	DEMOG			CONTACT			NDI
+	-----			-------			---
+	SubjID			SubjID			SSN
+	...				SSN				...
+	Other Vars		...				Other Vars
+					Other Vars
+
+	The problem is that there is not a common variable across all 3 data sets
+	
+	Strategy:
+	1) Merge 'DEMOG' with 'CONTACT' by 'SubjID'
+			Now we have a data set with 'SSN' in it
+	2) Sort the new data set by 'SSN'
+	3) Merge the new data set and 'NDI' by 'SSN'
+			Now all 3 data sets are combined!
+
+	Note:  PROC SQL could accomplish this in a single step!
+
+	Here's an example using PROC SQL Code to "join" the following tables:
+
+	NDI				IAResidents		States
+	-------			-----------		--------
+	SSN <---------> SSN				StateNum
+	DeathDt			StateCd <-----> StateCd
+	ICD10			Race			StateNm
+
+	First I need to create a simple 'IAResidents' data set   *;
+DATA WORK.IAResidents;
+	SET HypImpt.IowaResidents (KEEP = SSN Race);
+	RETAIN	StateCd 'IA';
+	RUN;
+
+PROC SQL NUMBER;
+	SELECT N.*, I.*, S.*
+		FROM	HypImpt.NDI			AS N,
+				WORK.IAResidents	AS I,
+				HypImpt.States		AS S
+		WHERE	N.SSN = I.SSN	AND
+				I.StateCd = S.StateCd
+		ORDER BY	SSN;
+	QUIT;
+
+
+
+
+*	SECTION 4.4.4 - SOLUTIONS  *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.4.1   |
+* ----------------------------- *
+	Task:  Create a data set containing subjects who did NOT
+			experience an adverse event   *;
+DATA	WORK.NoAEs;
+	MERGE	WORK.AESummary	(	IN = InAEs	)
+			CanTabs.Demog	(	KEEP = SubjID SexCd	)
+			CanTabs.Outcome	(	KEEP = SubjID LesionRatio	);
+	BY	SubjID;
+	IF	InAEs = 0;
+	RUN;
+
+PROC PRINT DATA = WORK.NoAEs;
+	RUN;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
