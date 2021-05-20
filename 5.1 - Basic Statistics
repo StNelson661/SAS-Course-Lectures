@@ -1,0 +1,839 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	5.1 - Basic Statistics.sas                                              *
+*	PURPOSE:	Illustrate material in Chapter 5.1                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-11-08																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	                                                                        *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-11-09  SMN Added TOC                                               *
+*               2019-11-05  SMN New illustrations added & minor edits                   *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 5.1.0 - Creating Output Data Sets Containing Analysis Results           *
+*   	Section 5.1.1 - Descriptive Statistics for Character Variables                  *
+*   	Section 5.1.2 - Descriptive Statistics for Numeric Variables                    *
+*   	Section 5.1.3 - Association Between 2 Character Variables                       *
+*   	Section 5.1.4 - Association Between 2 Numeric Variables                         *
+*   	Section 5.1.5 - Association Between 1 Character and 1 Numeric Variable          *
+*   	Section 5.1.6 - Additional Material                                             *
+*   	Section 5.1.7 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanTabs    "&CourseRoot/Cancer RCT/Data/3_Tabulations";
+LIBNAME CanAnl    "&CourseRoot/Cancer RCT/Data/4_Analysis";
+OPTIONS	FMTSEARCH = (CanTabs.CanFormats WORK LIBRARY)
+		NOFMTERR;
+
+
+
+
+*	SECTION 5.1.0 - CREATING OUTPUT DATA SETS CONTAINING ANALYSIS RESULTS   *; RUN;
+
+*	The Output Delivery System (ODS) may be used to create output data sets
+		which contain the results from any statistical procedure
+
+	Statistical procedures often produce several tables of output results
+	Each table has a unique identifying table name which may be used to save the results
+	To use ODS to save the results:
+
+		Step 1:  Figure out the table name of the desired output using either
+					A)	The SAS documentation, or
+					B)	ODS TRACE
+						1) Place the statement ODS TRACE ON before the procedure
+						2) Place the statement ODS TRACE OFF after the procedure
+						3) Look in the log for the name of each table produced
+
+		Step 2:  Use an ODS statement to send the table's contents to a data set
+					Use the syntax:
+					ODS OUTPUT desired-table-name = destination-data-set;
+
+
+
+
+*	SECTION 5.1.1 - DESCRIPTIVE STATISTICS FOR CHARACTER VARIABLES   *; RUN;
+
+*	PROC FREQ is the procedure designed to summarize and analyze distinct levels
+		of variables
+	PROC FREQ is used predominantly with classification variables (which are typically
+		character), but may also be used with numeric variables
+
+	The TABLES statement specifies the variable(s) to be summarized
+	Although it is an optional statement, when it isn't used frequencies for ALL variables
+		are displayed (often not desired and can produce voluminous output)
+	By default, values are displayed in order of the unformatted values
+
+	PROC FREQ produces 2 types of output data sets which may be requested as follows:
+	1)	Specify the OUT= option in a TABLES statement
+			This creates an output data set that contains frequency counts and percentages
+	2)	Specify an OUTPUT statement
+			This creates an output data set that contains statistics   *;
+
+
+*	Illustration 1 - Generating a Frequency Table of the Levels for a Variable   *; RUN;
+
+*	Variable	Type		Classification	Why Use in PROC FREQ
+	--------	----		--------------	--------------------
+	TxNm		Character	Yes				Summarize
+	EthRaceCd	Numeric		Yes				Summarize
+	SubjID		Character	No				Data cleaning - check for unique values
+	AgeAtEnroll	Numeric		No				Data cleaning - check ranges (PROC MEANS better)   *;
+	
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm EthRaceCd SubjID AgeAtEnroll;
+	RUN;
+
+
+*	Illustration 2 - Applying a Format to a Variable   *; RUN;
+
+*	If a format is applied to a variable, the values will be grouped & displayed
+		by the formatted values   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	AgeAtEnroll;
+	FORMAT	AgeAtEnroll AgeDecades.;
+	RUN;
+
+
+*	Illustration 3 - Creating a Data Set with PROC FREQ Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	EthRaceCd;
+	RUN;
+ODS TRACE OFF;
+*	In the log window we can see that the table name is 'OneWayFreqs'   *;
+
+ODS OUTPUT OneWayFreqs = WORK.FREQResults1;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	EthRaceCd;
+	RUN;
+
+PROC PRINT DATA = WORK.FREQResults1;
+	RUN;
+
+*	Method 2:  Using the TABLES statement's OUT= option   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	EthRaceCd	/	OUT = WORK.FREQResults2;
+	RUN;
+
+PROC PRINT DATA = WORK.FREQResults2;
+	RUN;
+
+*	Method 3:  Using the OUTPUT statement   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	EthRaceCd;
+	OUTPUT	OUT = WORK.FREQResults3;
+	RUN;
+*	No output is produced because statistics aren't being requested
+	We'll revisit this in Section 5.1.3!   *;
+
+
+*	Illustration 4 - Customizing the Output with TABLES Options   *; RUN;
+
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm;
+	TABLES	EthRaceCd	/	NOCUM;
+	TABLES	SubjID		/	NOPERCENT;
+	TABLES	AgeAtEnroll	/	NOPERCENT NOCUM;
+	RUN;
+
+
+*	Illustration 5 - Displaying Missing Values as a Level   *; RUN;
+
+*	Note:  1 subject has a missing value for the 'RaceCd' variable
+
+	By default, missing values are displayed below the table   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	RaceCd;
+	RUN;
+
+*	The MISSING option displayes missing values within the table   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	RaceCd	/	MISSING;
+	RUN;
+
+*	MISSPRINT removes the value from the statistics calculations   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	RaceCd	/	MISSPRINT;
+	RUN;
+
+
+*	Illustration 6 - Ordering Levels by Frequency   *; RUN;
+
+PROC FREQ
+		DATA	= CanAnl.CanAnalysis1
+		ORDER	= FREQ; * Easily find duplicates when unique values expected *;
+	TABLES	AgeAtEnroll	/	NOPERCENT NOCUM;
+	RUN;
+*	Within tied frequency counts, levels are displayed in order by unformatted values   *;
+
+
+*	Illustration 7 - Using the NLEVELS Option   *; RUN;
+
+*	The NLEVELS option displays a table at the top of the output showing
+		the number of distinct levels   *;
+PROC FREQ
+		DATA	= CanAnl.CanAnalysis1
+		NLEVELS;
+	TABLES	TxNm EthRaceCd SubjID AgeAtEnroll	/ NOPERCENT NOCUM;
+	RUN;
+
+*	If a variable has a missing value, additional columns for the entire
+		'NLEVELS' table are displayed
+	This may be seen by adding 'RaceCd' to the TABLES statement   *;
+PROC FREQ
+		DATA	= CanAnl.CanAnalysis1
+		NLEVELS;
+	TABLES	TxNm EthRaceCd SubjID AgeAtEnroll RaceCd	/ NOPERCENT NOCUM;
+	RUN;
+
+
+
+
+*	SECTION 5.1.2 - DESCRIPTIVE STATISTICS FOR NUMERIC VARIABLES   *; RUN;
+
+*	PROC MEANS is a procedure designed to summarize numeric variables
+	PROC MEANS may only be used on numeric variables
+	PROC SUMMARY uses the same exact syntax as PROC MEANS
+
+	The VAR statement specifies the variable(s) to be summarized
+	Although it is an optional statement, when it's not used summaries for ALL numeric
+		variables are displayed (often not desired)
+		Although the output is concise, it can be non-sensical on some variables (e.g. BirthDt)
+
+	PROC MEANS produces output data sets which may be requested as follows:
+	1)	Specify an OUTPUT statement
+			This creates an output data set that contains statistics   *;
+
+
+*	Illustration 1 - Using PROC MEANS   *; RUN;
+
+*	Note that summarizing 'AgeAtEnroll' is better using PROC MEANS than PROC FREQ   *;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	RUN;
+
+*	PROC MEANS will work on any numeric variable (such as EthRaceCd)
+	However, this illustration produces non-sensical output   *;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	EthRaceCd;
+	RUN;
+
+
+*	Illustration 2 - Creating a Data Set with PROC MEANS Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	RUN;
+ODS TRACE OFF;
+*	In the log we can see that the table name is 'Summary'   *;
+
+ODS OUTPUT Summary = WORK.MEANSResults1;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	RUN;
+*	This can produce v-e-r-y wide output   *;
+
+PROC PRINT DATA = WORK.MEANSResults1;
+	RUN;
+
+*	Method 2:  Using the OUTPUT statement   *;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	OUTPUT	OUT = WORK.MEANSResults2;
+	RUN;
+
+PROC PRINT DATA = WORK.MEANSResults2;
+	RUN;
+
+*	You may wish to re-structure the output data set (you know how!)   *;
+PROC TRANSPOSE
+		DATA	= WORK.MEANSResults2
+		OUT		= WORK.MEANSResults2Wide	(	RENAME	= (	_NAME_	= Variable	)
+												DROP	=	_LABEL_
+											);
+	VAR	AgeAtEnroll LesionRatio;
+	ID	_STAT_;
+	RUN;
+
+PROC PRINT DATA = WORK.MEANSResults2Wide;
+	RUN;
+
+*	Desired statistics can be generated for any variable as well and 
+		exported to the output data set   *;
+PROC MEANS	DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	OUTPUT	OUT = WORK.MEANSResults3 (DROP = _TYPE_ _FREQ_)
+		MEAN(AgeAtEnroll LesionRatio) = MeanAge MeanLesionRatio
+		STDDEV(AgeAtEnroll) = SDAge
+		MAX(LesionRatio) = WorstLesionResponse;
+	RUN;
+
+PROC PRINT DATA = WORK.MEANSResults3;
+	RUN;
+
+
+*	Illustration 3 - Using the MAXDEC= option   *; RUN;
+
+*	The MAXDEX= option specifies the number of decimals to display in the output
+	Notice that the 'N' statistics are not affected by the MAXDEC= option
+		(Neither is the 'NMISS' statistic   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1;
+	VAR	AgeAtEnroll;
+	RUN;
+
+
+*	Illustration 4 - Specifying Summary Statistics   *; RUN;
+
+*	When statistics are specified, the default ones are no longer displayed by default
+	Useful statistics which may be generated by options in PROC MEANS include:
+		Statistics: N NMISS SUM MEAN MODE STDDEV STDERR RANGE
+		Quantiles:	MIN P1 P5 P10 Q1 MEDIAN Q3 P90 P95 P99 MAX   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		MEDIAN Q1 Q3 N NMISS;
+	VAR	AgeAtEnroll;
+	RUN;
+
+
+*	Illustration 5 - Displaying Results by Levels of a Classification Variable   *; RUN;
+
+*	Use the CLASS statement to specify 1 or more classification variables
+	A row of summary statistics is displayed for every level of the classification variable
+	When the CLASS statement is used, NObs is displayed by default *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		MEAN MEDIAN;
+	CLASS	HadAEInd;
+	VAR	AgeAtEnroll;
+	RUN;
+
+*	NOBS:  The number of observations with the level value displayed (same as PROC FREQ output)
+	N:     The number of observations with non-missing values of the VAR variable
+	NMISS: The number of observations with missing values of the VAR variable   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		N NMISS MEAN;
+	CLASS	HadAEInd;
+	VAR	LesionRatio;
+	RUN;
+
+*	When there are no missing values, it may be nice to suppress the N Obs display
+		by using the NONOBS option   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		NONOBS /* Illustrates why I often put separate options on separate lines */
+		N NMISS MEAN;
+	CLASS	HadAEInd;
+	VAR	AgeAtEnroll;
+	RUN;
+
+*	When multiple variables are listed in the VAR statement, they are all displayed
+		within each level of the classification variable   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1;
+	CLASS	HadAEInd;
+	VAR	AgeAtEnroll LesionRatio;
+	RUN;
+
+
+*	Illustration 6 - Specifying Multiple Classification Variables   *; RUN;
+
+*	The 2nd classification variable is nested within the first classification variable   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		NONOBS;
+	CLASS	SexCd HadAEInd;
+	VAR	AgeAtEnroll;
+	RUN;
+
+*	Summarizing 3 variables by 2 classification variables   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		NONOBS;
+	CLASS	SexCd HadAEInd;
+	VAR	Lesion:;
+	RUN;
+
+
+*	Illustration 7 - Using the WAYS Statement   *; RUN;
+
+*	The WAYS statement specifies the number of ways to make unique combinations
+		of the CLASS variables
+	The arguments range from 0 to the number of class variables
+		0	returns the summary overall all observations
+		1	returns the summary individually for each class variable
+		2	returns the summary for every pair of class variables
+			etc.   *;
+PROC MEANS
+		DATA	= CanAnl.CanAnalysis1
+		MAXDEC	= 1
+		NONOBS;
+	CLASS	SexCd HadAEInd;
+	WAYS	0 1 2;
+	VAR	AgeAtEnroll;
+	RUN;
+
+
+
+
+*	SECTION 5.1.3 - ASSOCIATION BETWEEN 2 CHARACTER VARIABLES   *; RUN;
+
+*	PROC FREQ can assess associations between categorical variables
+	Use an asterisk (*) to "cross" variables in the TABLES statement
+	The last variable listed is always the Column variable
+	The 2nd-to-last variable listed is always the Row variable
+
+	The following all have the same meaning:
+		Cross-Tabulation
+		2-Way Table (also 3-Way, ... , N-Way)
+		Contingency Table   *;
+
+
+*	Illustration 1 - Creating a Cross-Tabulation   *; RUN;
+
+*	Goal:  Find the percentage of subjects who had an AE in each treatment group   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd TxNm;
+	TABLES	HadAEInd * TxNm; * This produces a cross-tabulation *;
+	RUN;
+
+
+*	Illustration 2 - Customizing the Output with TABLES Options   *; RUN;
+
+*	NOFREQ		Removes the display of the cell frequencies
+	NOPERCENT	Removes the display of the cell, marginal, and overall percentages
+	NOROW		Removes the display of the row percentages
+	NOCOL		Removes the display of the column percentages   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/	NOPERCENT NOROW NOCOL;
+	RUN;
+
+
+*	Illustration 3 - Testing the Association Between 2 Classification Variables   *; RUN;
+
+*	The CHISQ option will perform a Chi-Square test of association between
+		the crossed variables
+	Due to the small Expected cell counts, Fisher's Exact Test would be a more
+		appropriate statistical test than a Chi-Square test (in this illustration)
+	CHISQ will produce Fisher's Exact Test results for 2 x 2 tables
+	FISHER will produce Fisher's Exact Test results for r x c tables*;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/	NOPERCENT NOROW CHISQ;
+	RUN;
+
+
+*	Illustration 4 - Creating a Data Set with PROC FREQ Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/	NOPERCENT NOROW CHISQ;
+	RUN;
+ODS TRACE OFF;
+*	In the log we can see that tables of interest include 'CrossTabFreqs' and 'ChiSq'   *;
+
+ODS OUTPUT	CrossTabFreqs = WORK.CrossTabResults1
+			ChiSq = WORK.ChiSqResults1;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/	NOPERCENT NOROW CHISQ;
+	RUN;
+
+PROC PRINT DATA = WORK.CrossTabResults1;
+	RUN;
+
+PROC PRINT DATA = WORK.ChiSqResults1;
+	RUN;
+
+*	Method 2:  Using the FREQ Procedure's Options
+	- TABLES statement's OUT= option for cross-tabulation results
+	- OUTPUT statement's option for the Chi-Square results   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/	NOPERCENT NOROW CHISQ OUT = WORK.CrossTabResults2;
+	OUTPUT	OUT = WORK.ChiSqResults2	CHISQ;
+	RUN;
+
+PROC PRINT DATA = WORK.CrossTabResults2;
+	RUN;
+
+PROC PRINT DATA = WORK.ChiSqResults2;
+	RUN;
+*	Note that different options in the OUTPUT statement will generate different output
+	CHISQ	sends all the output to the data set
+	PCHI	sends only the Pearson Chi-Square results to the data set
+	LRCHI	sends only the Likelihood Ratio Chi-Square results to the data set
+	FISHER	sends only the Fisher's Exact Test p-values to the data set
+		and so on with the following:
+		AJCHI CONTGY CRAMV MHCHI PHI
+	Specifying multiple options will send output from each to the data set ;
+
+
+
+
+*	SECTION 5.1.4 - ASSOCIATION BETWEEN 2 NUMERIC VARIABLES   *; RUN;
+
+
+*	Illustration 1 - Producing Correlation Statistics   *; RUN;
+
+*	PROC CORR will perform a correlation analysis
+	Correlations will be produced between all variables listed in the
+		VAR statement   *;
+PROC CORR DATA = CanAnl.CanAnalysis1 PLOTS=MATRIX;
+	VAR	LesionSumCmMon0 LesionSumCmMon6 LesionRatio;
+	RUN;
+
+
+*	Illustration 2 - Creating a Data Set with PROC CORR Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC CORR
+		DATA	= CanAnl.CanAnalysis1
+		PLOTS	= MATRIX;
+	VAR	LesionSumCmMon0 LesionSumCmMon6 LesionRatio;
+	RUN;
+ODS TRACE OFF;
+*	In the log we can see that the table name is 'PearsonCorr'   *;
+
+ODS OUTPUT	PearsonCorr = WORK.CorrResults1;
+PROC CORR
+		DATA	= CanAnl.CanAnalysis1
+		PLOTS	= MATRIX;
+	VAR	LesionSumCmMon0 LesionSumCmMon6 LesionRatio;
+	RUN;
+
+PROC PRINT DATA = WORK.CorrResults1;
+	RUN;
+
+*	Method 2:  Using the PROC CORR OUTP= Option   *;
+PROC CORR
+		DATA	= CanAnl.CanAnalysis1
+		PLOTS	= MATRIX
+		OUTP	= WORK.CorrResults2;
+	VAR	LesionSumCmMon0 LesionSumCmMon6 LesionRatio;
+	RUN;
+
+PROC PRINT DATA = WORK.CorrResults2;
+	RUN;
+
+*	Illustration 3 - Performing a Simple Linear Regression   *; RUN;
+
+*	PROC REG is one of a few interactive procedures
+	These PROCs need a QUIT statement to end their invocation   *;
+PROC REG DATA = CanAnl.CanAnalysis1	PLOTS = NONE;
+	MODEL	LesionSumCmMon6 = LesionSumCmMon0;
+	RUN;
+	QUIT;
+
+
+*	Illustration 4 - Creating a Data Set with PROC REG Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC REG DATA = CanAnl.CanAnalysis1	PLOTS = NONE;
+	MODEL	LesionSumCmMon6 = LesionSumCmMon0;
+	RUN;
+	QUIT;
+ODS TRACE OFF;
+*	In the log we can see that the table name is 'ParameterEstimates'   *;
+
+ODS OUTPUT	ParameterEstimates = WORK.BetasResults1;
+PROC REG DATA = CanAnl.CanAnalysis1	PLOTS = NONE;
+	MODEL	LesionSumCmMon6 = LesionSumCmMon0;
+	RUN;
+	QUIT;
+
+PROC PRINT DATA = WORK.BetasResults1;
+	RUN;
+
+*	Method 2:  Using PROC REG's OUTEST= Option   *;
+
+*	The OUTEST= option outputs a data set that contains parameter estimates
+	The TABLEOUT option adds SEs, confidence limits & test statistics to the OUTEST= data set   *;
+PROC REG
+		DATA	= CanAnl.CanAnalysis1
+		OUTEST	= WORK.BetasResults2
+		TABLEOUT
+		PLOTS	= NONE;
+	MODEL	LesionSumCmMon6 = LesionSumCmMon0;
+	RUN;
+	QUIT;
+
+PROC PRINT DATA = WORK.BetasResults2;
+	RUN;
+
+*	Method 3:  Using the OUTPUT Statement   *;
+
+*	The OUTPUT statement creates an output data set which contains
+	- All original variables in the data set
+	- Variables containing a variety of statistics and diagnostic measures
+	- These are observation-level diagnostics, which include:
+		PREDICTED	Predicted outcome for each observation
+		STDI		Standard error of the individual predicted values
+		RESIDUAL	Residuals (Observed - Predicted)
+		STUDENT		Studentized (i.e. standardized) residuals
+		and so on for other diagnostics   *;
+PROC REG DATA = CanAnl.CanAnalysis1	PLOTS = NONE;
+	MODEL	LesionSumCmMon6 = LesionSumCmMon0;
+	OUTPUT	OUT = WORK.ObsDiagnostics
+				PREDICTED	= YHat
+				STDI		= PredSE
+				RESIDUAL	= Resid;
+	RUN;
+	QUIT;
+
+PROC PRINT DATA = WORK.ObsDiagnostics;
+	RUN;
+
+
+
+
+*	SECTION 5.1.5 - ASSOCIATION BETWEEN 1 CHARACTER AND 1 NUMERIC VARIABLE   *; RUN;
+
+
+*	Illustration 1 - Performing a t-Test   *; RUN;
+
+*	PROC TTEST will perform a t-test between groups defined by the values of the
+		variable listed in the CLASS statement (this must have only 2 levels)
+	The dependent variable is listed in the VAR statement
+
+	Goal:  Perform a t-test on the 'LesionRatio' variable between the 2
+			treatment groups (i.e. by the 'TxNm' variable)   *;
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+
+*	Illustration 2 - Creating a Data Set with PROC TTEST Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+ODS TRACE OFF;
+*	In the log we can see that desired tables include 'Statistics' and 'TTests'   *;
+
+ODS OUTPUT	Statistics	= WORK.StatsResults1
+			TTests		= WORK.TStatsResults1;
+PROC TTEST DATA = CanAnl.CanAnalysis1;
+	CLASS	TxNm;
+	VAR	LesionRatio;
+	RUN;
+
+PROC PRINT DATA = WORK.StatsResults1;
+	RUN;
+
+PROC PRINT DATA = WORK.TStatsResults1;
+	RUN;
+
+
+*	Illustration 3 - Performing an Analysis of Variance (ANOVA)   *; RUN;
+
+*	PROC ANOVA will perform an Analysis of Variance (ANOVA) which is a test
+		of the null hypothesis that the mean of a specified continuous variable
+		is equal across all levels of a classification variable
+
+	By default, the levels of the CLASS variable are the formatted values
+	ORDER = INTERNAL orders the levels by unformatted values
+
+	Goal:  Test whether the mean of LesionRatio is the same across all levels
+			of adverse event grade (i.e. of 'MaxGrade')   *;
+PROC ANOVA
+		DATA	= CanAnl.CanAnalysis1
+		ORDER	= INTERNAL;
+	CLASS	MaxGrade;
+	MODEL	LesionRatio = MaxGrade;
+	RUN;
+	QUIT;
+
+
+*	Illustration 4 - Creating a Data Set with PROC ANOVA Results   *; RUN;
+
+*	Method 1:  Use ODS   *;
+ODS TRACE ON;
+PROC ANOVA
+		DATA	= CanAnl.CanAnalysis1
+		ORDER	= INTERNAL;
+	CLASS	MaxGrade;
+	MODEL	LesionRatio = MaxGrade;
+	RUN;
+	QUIT;
+ODS TRACE OFF;
+*	In the log we can see that desired tables include 'OverallANOVA' and 'ModelANOVA'   *;
+
+ODS OUTPUT	OverallANOVA	= WORK.ANOVAResults1
+			ModelANOVA		= WORK.ModelResults1;
+PROC ANOVA
+		DATA	= CanAnl.CanAnalysis1
+		ORDER	= INTERNAL;
+	CLASS	MaxGrade;
+	MODEL	LesionRatio = MaxGrade;
+	RUN;
+	QUIT;
+
+PROC PRINT DATA = WORK.ANOVAResults1;
+	RUN;
+
+PROC PRINT DATA = WORK.ModelResults1;
+	RUN;
+
+*	Method 2:  Use PROC ANOVA's OUTSTAT= Option   *;
+PROC ANOVA
+		DATA	= CanAnl.CanAnalysis1
+		ORDER	= INTERNAL
+		OUTSTAT	= WORK.ANOVAResults2;
+	CLASS	MaxGrade;
+	MODEL	LesionRatio = MaxGrade;
+	RUN;
+	QUIT;
+
+PROC PRINT DATA = WORK.ANOVAResults2;
+	RUN;
+
+
+
+
+*	SECTION 5.1.6 - ADDITIONAL MATERIAL   *; RUN;
+
+*	This section provides additional illustrations of features from PROC FREQ   *;
+
+
+*	Illustration 1 - The MISSING Option   *; RUN;
+
+*	By default, if a value is missing, that entire observation is not displayed   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	RaceCd * TxNm	/	NOPERCENT NOROW NOCOL;
+	RUN;
+
+*	The MISSING option includes observations with missing value(s) in the output   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	RaceCd * TxNm	/	MISSING NOPERCENT NOROW NOCOL;
+	RUN;
+
+
+*	Illustration 2 - Creating a 3-Way Table   *; RUN;
+
+*	The first variable is the Page variable   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm * SexCd * RaceCd	/	MISSING NOPERCENT NOROW NOCOL;
+	RUN;
+
+
+*	Illustration 3 - Displaying a Cross-Tabulation as a Listing   *; RUN;
+
+*	Notice that the statistics are the same as for univeriate freq distributions   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/ LIST;
+	RUN;
+
+*	The available options are now the same as with univariate displays   *;
+PROC FREQ	DATA = CanAnl.CanAnalysis1;
+	TABLES	HadAEInd * TxNm	/ LIST NOCUM NOPERCENT;
+	RUN;
+
+*	A 3-way cross tabulation may be more readable using LIST format   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm * SexCd * RaceCd	/	LIST MISSING NOPERCENT NOROW NOCOL;
+	RUN;
+
+
+*	Illustration 4 - Using the SPARSE option   *; RUN;
+
+*	The SPARSE option will display combinations with a frequency of zero (0)
+	This shows results without the SPARSE option   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm * RaceCd	/	LIST MISSING NOPERCENT NOROW NOCOL;
+	RUN;
+
+*	Now results using the SPARSE option   *;
+PROC FREQ DATA = CanAnl.CanAnalysis1;
+	TABLES	TxNm * RaceCd	/	LIST SPARSE MISSING NOPERCENT NOROW NOCOL;
+	RUN;
+
+
+*	Illustration 5 - PROC UNIVARIATE   *; RUN;
+
+*	PROC UNIVARIATE generates a wealth of output for summarizing numeric variables
+	Use the ODS TRACE statements to find the name of the output object you desire   *;
+PROC UNIVARIATE DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll;
+	RUN;
+
+*	A list of the extreme (high and low) values are displayed near the end of the output
+	The NEXTROBS= option specifies how many extreme observations to display   *;
+PROC UNIVARIATE
+		DATA = CanAnl.CanAnalysis1
+		NEXTROBS = 3;
+	VAR	AgeAtEnroll;
+	RUN;
+
+*	The ID statement specifies the variable(s) to include next to the extreme observations
+		(the observation number is still included)   *;
+PROC UNIVARIATE
+		DATA = CanAnl.CanAnalysis1
+		NEXTROBS = 3;
+	VAR	AgeAtEnroll;
+	ID	SubjID;
+	RUN;
+
+*	The OUTPUT statement saves statistics in an output data set
+	Statistics keywords may be used and the names following name the output variable
+		for each input variable (as shown below with the MEAN= keyword and names)
+	The PCTLPTS= option specifies one or more percentiles to be computed in addition
+		to the percentiles that PROC UNIVARIATE automatically computes
+	The PCTLPRE= option specifies the prefix to create the variable names for the 
+		variables that contain the PCTLPTS= percentiles (it must be used with PCTLPTS=)
+		(A separate value of PCTLPRE= should be used for each variable in the VAR statement)   *;
+PROC UNIVARIATE DATA = CanAnl.CanAnalysis1;
+	VAR	AgeAtEnroll LesionRatio;
+	OUTPUT	OUT = WORK.UnivStats
+			MEAN = AgeMean LesionRatioMean
+			PCTLPTS = 80 85
+			PCTLPRE = AgePctl_ LesionPctl_;
+	RUN;
+
+PROC PRINT DATA = WORK.UnivStats;
+	RUN;
+
+
+
+
+*	SECTION 5.1.7 - SOLUTIONS   *; RUN;
+
+*	N/A   *;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
