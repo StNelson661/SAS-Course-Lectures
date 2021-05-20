@@ -1,0 +1,401 @@
+*************	P	R	O	G	R	A	M		H	E	A	D	E	R	*****************
+*****************************************************************************************
+*																						*
+*	PROGRAM:	4.3 - Combining Data Vertically.sas                                     *
+*	PURPOSE:	Illustrate material in Chapter 4.3                                      *
+*	AUTHOR:		Nelson															*
+*	CREATED:	2017-10-30																*
+*	                                                                                    *
+*	COURSE:		BIOS 6680 - Data Management Using SAS                                   *
+*	DATA USED:	Instream                                                                *
+*	SOFTWARE:	SAS (r) Proprietary Software 9.4 (TS1M4)								*
+*	MODIFIED:	DATE		BY	REASON													*
+*				----------	---	-------------------------------------------------------	*
+*               2018-10-31  SMN Added TOC & Comprehension Checks                        *
+*               2019-09-23  SMN Minor edits                                             *
+*	                                                                                    *
+*   CONTENTS:                                                                           *
+*   	Section 4.3.1 - Concatenating Data Sets                                         *
+*   	Section 4.3.2 - Additional Material                                             *
+*   	Section 4.3.3 - Solutions                                                       *
+*	                                                                                    *
+*****************************************************************************************
+***********************************************************************************; RUN;
+
+
+*   Instructions:
+    1)  Change the path in the %LET statement to the location of the BIOS 6680 course root folder
+    2)  Submit the %LET and LIBNAME statements below   *;
+*	Note:  Forward slashes are used for portability across operating environments   *;
+
+%LET	CourseRoot = C:/Dropbox/2 - Education/7 - Teaching/1 - SAS/BIOS 6680 - Data Management Using SAS/4 - Projects/Programming Project;
+LIBNAME CanImpt    "&CourseRoot/Cancer RCT/Data/2_Import";
+
+
+
+
+*	SECTION 4.3.1 - CONCATENATING DATA SETS   *; RUN;
+
+*	Concatenating "stacks" the data sets vertically on top of each other
+	Concatenating data is most commonly performed when the data sets contain the same variables
+
+	In the output data set, the final number of:
+		1)	Observations is the sum of the observations in each component data set
+		2)	Variables is the number of unique variables across all component data sets   *;
+
+
+*	Illustration 1 - Using the SET Statement to Concatenate Data Sets   *; RUN;
+
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory_2015
+		CanImpt.Laboratory_2016;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Note:  The order of observations in the output data set is determined by the order in
+			the SET statement
+			So the 2015 data is before the 2016 data in the output data set
+	In WORK.Illus, the number of:
+		1)	Observations is 81 + 45 = 126
+		2)	Variables is 5 (the same 5 variables are in both component data sets)   *;
+
+
+*	Illustration 2 - Shortcuts May Be Used for Data Sets in the SET Statement   *; RUN;
+
+*	Using a name prefix list (below) is an alternative to the above   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Laboratory:;
+	RUN;
+
+*	Other prefixes would also work, for example:   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Labo:;
+	RUN;
+
+*	Numbered range lists may also be used
+	Goal:  Concatenate the data from the first 4 patients in Site 2
+	(Notice that the name prefix list wouldn't work for this task because the
+		5th patient would also be included when any prefix is used!)   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Lab_Data_Pt1 - CanImpt.Lab_Data_Pt4;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Note:  There must be a data set for all numbers between the start and end numbers   *;
+
+*	Concatenating in descending order is also possible   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Lab_Data_Pt4 - CanImpt.Lab_Data_Pt1;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 3 - Interleaving the Observations   *; RUN;
+
+*	Interleaving is more efficient than concatenating and then re-sorting
+	The observations within each source data set must be ordered by the BY variable(s)
+
+	Goal:  Concatenate the 'Lab_data_ptN' patient lab data into a data set that's ordered by 'LabDate'
+		Notice that in each component data set the observations are in order by date   *;
+DATA	WORK.Illus;
+	SET	CanImpt.Lab_:;
+	BY	LabDate;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	In WORK.Illus, the number of:
+		1)	Observations is 4 + 3 + 4 + 4 + 4 = 19
+		2)	Variables is 6 (the same 6 variables are in each component data set)   *;
+
+
+*	Illustration 4 - Concatenating Data Sets with Different Variables   *; RUN;
+
+*	Creating data sets for the illustrations   *;
+DATA	WORK.Hitting1958;
+	INFILE	DATALINES;
+	RETAIN	Season	1958;
+	INPUT	Player	$
+			R
+			HR
+			RBI		;
+	DATALINES;
+Aaron   109 30  95
+Banks   119 47 129
+Colavito 80 41 113
+Mantle  127 42  97
+Mays    121 29  96
+;
+
+TITLE1 "1958 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1958;
+	RUN;
+
+DATA	WORK.Hitting1959;
+	INFILE	DATALINES;
+	RETAIN	Season	1959;
+	INPUT	Player	$
+			HR
+			RBI
+			SB		;
+	DATALINES;
+Aaron   39 123 8
+Banks   47 129 2
+Mathews 46 114 2
+;
+
+TITLE1 "1959 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1959;
+	RUN;
+
+DATA	WORK.Hitting1960;
+	INFILE	DATALINES;
+	RETAIN	Season	1960;
+	INPUT	Player	$
+			HR
+			RBI		;
+	DATALINES;
+Aaron   40 126
+Banks   41 117
+Mantle  40  96
+Maris   39 112
+;
+
+TITLE1 "1960 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1960;
+	RUN;
+
+DATA	WORK.Illus;
+	SET	WORK.Hitting:;
+	RUN;
+
+TITLE1 "1958-1960 Hitting Statistics";
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Notice the following facts:
+
+	In WORK.Illus, the number of:
+		1)	Observations is 5 + 3 + 4 = 12
+		2)	Variables is 6 (the number of unique variables across the component data sets)
+
+	Every variable that is in at least 1 component data set is in the output data set
+	Variable values are set to missing for observations from component data sets which
+		did not contain that variable
+
+	When SAS compiles the SET statemment, it creates the PDV by reading the variables in
+		each component sequentially.  Notice the variables in each data set:
+	1958:  Season Player R HR RBI
+	1959:  Season Player   HR RBI SB
+	1960:  Season Player   HR RBI    *;
+
+
+*	Illustration 5 - How SAS Processes the Data Sets   *; RUN;
+
+*	Recall (Section 2.1.2) that at the start of each iteration of the DATA step, SAS
+		1)	Retains values of existing variables in the PDV
+				Look at 'Season', 'Player', 'HR', 'RBI' in the log
+		2)	Re-initializes new variables to missing in the PDV
+				Look at 'Bases' in the log   *;
+DATA	WORK.Illus;
+	PUTLOG	'BEFORE SET STATEMENT: ' _ALL_;
+
+	SET	WORK.Hitting1960; * This contains the existing variables *;
+	Bases = HR * 4;	* This is a new variable *;
+
+	PUTLOG	' AFTER SET STATEMENT: '_ALL_;
+	PUTLOG	'.';
+	RUN;
+
+*	When concatenating data sets, when the end of each component data set is reached
+		SAS initializes the PDV to missing at the start of reading EACH data set
+		This is why values are NOT retained into observations from data sets
+			which didn't have the variable, e.g.
+				121 for 'R' isn't retained through the 1959 and 1960 data sets
+				2 for 'SB' isn't retained through the 1960 data set   *;
+DATA	WORK.Illus;
+	SET	WORK.Hitting:;
+	RUN;
+
+TITLE1 "1958-1960 Hitting Statistics";
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Illustration 6 - Variables with the Same Meaning but Different Attributes    *; RUN;
+
+*	Creating data for the illustration   *;
+DATA	WORK.Hitting1961;
+	INFILE	DATALINES;
+	RETAIN	Season	1961;
+	INPUT	Name	$	1-9
+			HomeRuns
+			RBI		;
+	DATALINES;
+Aaron     34 120
+Killebrew 46 122
+Mantle    54 128
+Maris     61 141
+Mays      40 123
+;
+
+TITLE1 "1961 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1961;
+	RUN;
+TITLE;
+
+
+*	Approach 1:  Making no changes   *;
+DATA	WORK.Illus;
+	SET	WORK.Hitting:;
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+
+*	Approach 2:  Renaming variables so those containing the same values match   *;
+DATA	WORK.Illus;
+	SET	WORK.Hitting1958 - WORK.Hitting1960
+		WORK.Hitting1961	(	RENAME	= (	Name		= Player
+											HomeRuns	= HR	)
+							);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+*	Note:  Very close, but "Killebrew" was truncated   *;
+
+*	Approach 3:  Renaming variables and setting the length of 'Player'   *;
+DATA	WORK.Illus;
+	RETAIN	Season; * Simply to keep it first in the PDV *;
+	LENGTH	Player	$ 9;
+	SET	WORK.Hitting1958 - WORK.Hitting1960
+		WORK.Hitting1961	(	RENAME	= (	Name		= Player
+											HomeRuns	= HR	)
+							);
+	RUN;
+
+PROC PRINT DATA = WORK.Illus;
+	RUN;
+
+*	Advice:  Check the attributes of each data set which you concatenate!   *;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.3.1   |
+* ----------------------------- *
+	Below is hitting data from 1962
+	Tasks:  1)	Concatenate the 1962 data with the 1958-1961 data
+			2)	Interleave the data sets so that the observations
+					are ordered by A) Player, then B) Season
+			3)	Keep only the following:  Season, Player, and HR   ;
+DATA	WORK.Hitting1962;
+	INFILE	DATALINES;
+	RETAIN	Year	1962;
+	INPUT	Player	$	1-9
+			HR	;
+	DATALINES;
+Aaron     45
+Banks     37
+Colavito  37
+Killebrew 48
+Mantle    30
+Maris     33
+Mathews   29
+Mays      49
+;
+
+TITLE1 "1962 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1962;
+	RUN;
+
+DATA WORK.HomeRuns;
+	SET	WORK.Hitting1958
+		WORK.Hitting1959
+		WORK.Hitting1960
+		WORK.Hitting1961	(RENAME = (	Name	 = Player
+										HomeRuns = HR	)	)
+		[add 1962 hitting data];
+	RUN;
+
+TITLE1 "Home Runs for #BYVAL(Player)";
+PROC PRINT DATA = WORK.HomeRuns;
+	BY Player;
+	PAGEBY Player;
+	ID Player;
+	RUN;
+TITLE;
+
+
+
+
+*	SECTION 4.3.2 - ADDITIONAL MATERIAL   *; RUN;
+
+*	None   *;
+
+
+
+
+*	SECTION 4.3.3 - SOLUTIONS   *; RUN;
+
+
+* ----------------------------- *
+|   Comprehension Check 4.3.1   |
+* ----------------------------- *
+	Below is hitting data from 1962
+	Tasks:  1)	Concatenate the 1962 data with the 1958-1961 data
+			2)	Interleave the data sets so that the observations
+					are ordered by A) Player, then B) Season
+			3)	Keep only the following:  Season, Player, and HR   ;
+DATA	WORK.Hitting1962;
+	INFILE	DATALINES;
+	RETAIN	Year	1962;
+	INPUT	Player	$	1-9
+			HR	;
+	DATALINES;
+Aaron     45
+Banks     37
+Colavito  37
+Killebrew 48
+Mantle    30
+Maris     33
+Mathews   29
+Mays      49
+;
+
+TITLE1 "1962 Hitting Statistics";
+PROC PRINT DATA = WORK.Hitting1962;
+	RUN;
+
+DATA WORK.HomeRuns;
+	KEEP	Season Player HR;
+	RETAIN	Season;
+	LENGTH	Player $ 9;
+	SET	WORK.Hitting1958
+		WORK.Hitting1959
+		WORK.Hitting1960
+		WORK.Hitting1961	(RENAME = (	Name	 = Player
+										HomeRuns = HR	)	)
+		WORK.Hitting1962	(RENAME = (	Year = Season)	);
+	BY	Player Season;
+	RUN;
+
+TITLE1 "Home Runs for #BYVAL(Player)";
+PROC PRINT DATA = WORK.HomeRuns;
+	BY Player;
+	PAGEBY Player;
+	ID Player;
+	RUN;
+TITLE;
+
+
+
+
+;	*';	*";	*/;	QUIT;	RUN;
+*	End of Program   *; RUN;
+
